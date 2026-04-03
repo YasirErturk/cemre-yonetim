@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cemre Apartmanı Yönetimi</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="main-header">
+    <div class="header-container">
+        <div class="logo">Cemre<span>Apartmanı</span></div>
+        <div id="loginDiv" class="header-auth">
+            <input type="email" id="email" placeholder="Yönetici E-posta">
+            <input type="password" id="password" placeholder="Şifre">
+            <button id="loginBtn">Giriş Yap</button>
+        </div>
+        <div id="timerDisplay" class="header-admin-tools" style="display:none;">
+            <div class="timer-box">Süre: <span id="countdown">05:00</span></div>
+            <button id="topLogoutBtn" class="logout-btn">Çıkış</button>
+        </div>
+    </div>
+</header>
+
+<main class="container">
+    <div id="tabButtons" class="tab-container" style="display:none;">
+        <button id="tab-kayitlar" class="tab-btn active" onclick="showTab('kayitlar')">İşlem Kayıtları</button>
+        <button id="tab-sakinler" class="tab-btn" onclick="showTab('sakinler')">Sakin Yönetimi</button>
+    </div>
+
+    <div id="kayitlarTab">
+        <section id="adminDiv" class="add-data-section" style="display:none;">
+            <h3>Yeni İşlem Ekle</h3>
+            <div class="input-grid-large">
+                <select id="sakinSecici">
+                    <option value="Ortak Alan / Apartman">Ortak Alan / Apartman</option>
+                </select>
+                <select id="kategori">
+                    <option value="">Kategori...</option>
+                    <option value="Aidat">Aidat Geliri</option>
+                    <option value="Asansör Bakım">Asansör Bakım</option>
+                    <option value="Temizlik">Temizlik</option>
+                    <option value="Elektrik">Ortak Elektrik</option>
+                    <option value="Su">Ortak Su</option>
+                    <option value="Onarım">Tamirat/Onarım</option>
+                    <option value="Diğer">Diğer</option>
+                </select>
+                <input type="number" id="tutar" placeholder="Tutar (TL)">
+                <input type="text" id="detay" placeholder="İşlem Detayı (Örn: Mart ayı asansör)">
+                <button id="ekleBtn">Kaydet</button>
+            </div>
+        </section>
+        <div class="list-header">
+            <h2>İşlem Geçmişi</h2>
+            <div class="badge" id="dataCount">0 Kayıt</div>
+        </div>
+        <ul id="veriListesi"></ul>
+    </div>
+
+    <div id="sakinlerTab" style="display:none;">
+        <section class="add-data-section" style="border-left-color: #f1c40f;">
+            <h3>Yeni Sakin Tanımla (1-12)</h3>
+            <div class="input-grid">
+                <input type="text" id="sakinAd" placeholder="Ad Soyad">
+                <input type="number" id="daireNo" placeholder="Daire (1-12)" min="1" max="12">
+                <button id="sakinEkleBtn" style="background:#f1c40f; color:#333;">Sakin Ekle</button>
+            </div>
+        </section>
+        <div class="list-header"><h2>Sakin Listesi</h2></div>
+        <ul id="sakinListesi"></ul>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
+</body>
+</html>
