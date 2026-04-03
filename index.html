@@ -3,72 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cemre Apartmanı Yönetimi</title>
+    <title>Cemre Apartmanı | Yönetim Sistemi</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <header class="main-header">
     <div class="header-container">
-        <div class="logo">Cemre<span>Apartmanı</span></div>
+        <div class="logo-area">
+            <div class="logo">Cemre<span>Apartmanı</span></div>
+            <div id="adminBadge" class="admin-info">
+                <span>Yönetim Paneli</span>
+            </div>
+        </div>
         <div id="loginDiv" class="header-auth">
-            <input type="email" id="email" placeholder="Yönetici E-posta">
+            <input type="email" id="email" placeholder="E-posta">
             <input type="password" id="password" placeholder="Şifre">
-            <button id="loginBtn">Giriş Yap</button>
+            <button id="loginBtn">Giriş</button>
         </div>
         <div id="timerDisplay" class="header-admin-tools" style="display:none;">
-            <div class="timer-box">Süre: <span id="countdown">05:00</span></div>
-            <button id="topLogoutBtn" class="logout-btn">Çıkış</button>
+            <div class="timer-box">Süre: <span id="countdown">10:00</span></div>
+            <button id="topLogoutBtn" class="logout-btn">Güvenli Çıkış</button>
         </div>
     </div>
 </header>
 
 <main class="container">
+    <div class="stats-grid">
+        <div class="stat-card bakiye"><small>Genel Kasa</small><h2 id="totalGenel">0.00 TL</h2></div>
+        <div class="stat-card banka"><small>Banka Hesabı</small><h2 id="totalBanka">0.00 TL</h2></div>
+        <div class="stat-card nakit"><small>Eldeki Nakit</small><h2 id="totalNakit">0.00 TL</h2></div>
+    </div>
+
+    <section class="filter-section">
+        <div class="filter-grid">
+            <input type="text" id="searchFilter" placeholder="İşlem ara..." oninput="listeleVeriler()">
+            <select id="daireFilter" onchange="listeleVeriler()"><option value="all">Tüm Daireler</option></select>
+            <select id="yearFilter" onchange="listeleVeriler()">
+                <option value="all">Tüm Yıllar</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+            </select>
+            <select id="typeFilter" onchange="listeleVeriler()">
+                <option value="all">Gelir / Gider</option>
+                <option value="gelir">Gelirler</option>
+                <option value="gider">Giderler</option>
+            </select>
+            <select id="walletFilter" onchange="listeleVeriler()">
+                <option value="all">Kasa Tipi</option>
+                <option value="Banka">Banka</option>
+                <option value="Nakit">Nakit</option>
+            </select>
+        </div>
+    </section>
+
     <div id="tabButtons" class="tab-container" style="display:none;">
-        <button id="tab-kayitlar" class="tab-btn active" onclick="showTab('kayitlar')">İşlem Kayıtları</button>
-        <button id="tab-sakinler" class="tab-btn" onclick="showTab('sakinler')">Sakin Yönetimi</button>
+        <button id="tab-kayitlar" class="tab-btn active" onclick="showTab('kayitlar')">Hareketler</button>
+        <button id="tab-sakinler" class="tab-btn" onclick="showTab('sakinler')">Sakinler</button>
     </div>
 
     <div id="kayitlarTab">
         <section id="adminDiv" class="add-data-section" style="display:none;">
-            <h3>Yeni İşlem Ekle</h3>
+            <h3>Yeni İşlem Kaydı</h3>
             <div class="input-grid-large">
-                <select id="sakinSecici">
-                    <option value="Ortak Alan / Apartman">Ortak Alan / Apartman</option>
-                </select>
+                <input type="date" id="islemTarihi">
+                <select id="sakinSecici"></select>
                 <select id="kategori">
-                    <option value="">Kategori...</option>
                     <option value="Aidat">Aidat Geliri</option>
-                    <option value="Asansör Bakım">Asansör Bakım</option>
-                    <option value="Temizlik">Temizlik</option>
-                    <option value="Elektrik">Ortak Elektrik</option>
-                    <option value="Su">Ortak Su</option>
-                    <option value="Onarım">Tamirat/Onarım</option>
-                    <option value="Diğer">Diğer</option>
+                    <option value="Gider">Genel Gider</option>
+                    <option value="Fatura">Fatura Ödemesi</option>
                 </select>
-                <input type="number" id="tutar" placeholder="Tutar (TL)">
-                <input type="text" id="detay" placeholder="İşlem Detayı (Örn: Mart ayı asansör)">
-                <button id="ekleBtn">Kaydet</button>
+                <select id="kasaTipi"><option value="Banka">Banka</option><option value="Nakit">Nakit</option></select>
+                <input type="number" id="tutar" placeholder="Tutar">
+                <input type="text" id="detay" placeholder="Açıklama">
+                <button id="ekleBtn" class="fancy-btn">KAYDET</button>
             </div>
         </section>
-        <div class="list-header">
-            <h2>İşlem Geçmişi</h2>
-            <div class="badge" id="dataCount">0 Kayıt</div>
-        </div>
         <ul id="veriListesi"></ul>
     </div>
 
     <div id="sakinlerTab" style="display:none;">
-        <section class="add-data-section" style="border-left-color: #f1c40f;">
-            <h3>Yeni Sakin Tanımla (1-12)</h3>
-            <div class="input-grid">
-                <input type="text" id="sakinAd" placeholder="Ad Soyad">
-                <input type="number" id="daireNo" placeholder="Daire (1-12)" min="1" max="12">
-                <button id="sakinEkleBtn" style="background:#f1c40f; color:#333;">Sakin Ekle</button>
+        <section class="add-data-section" style="border-left-color: #f59e0b">
+            <h3>Sakin Tanımla</h3>
+            <div class="input-grid-large">
+                <input type="number" id="inputDaireNo" placeholder="Daire No">
+                <input type="text" id="inputAdSoyad" placeholder="Ad Soyad">
+                <button id="sakinKaydetBtn" style="background:#f59e0b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Ekle</button>
             </div>
         </section>
-        <div class="list-header"><h2>Sakin Listesi</h2></div>
         <ul id="sakinListesi"></ul>
     </div>
 </main>

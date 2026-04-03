@@ -2,146 +2,199 @@ const SUPABASE_URL = 'https://daruffqlidfrhbwswopn.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_8CQ-97MUtgaTGkgOo2xFcg_3ZijKORD';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const SESSION_TIME = 5 * 60; 
+const SESSION_TIME = 10 * 60;
 let remainingTime = SESSION_TIME;
-let inactivityTimer, countdownTimer;
+let countdownInterval, rawData = [];
 
-// DOM Elemanları
-const loginDiv = document.getElementById('loginDiv');
-const adminDiv = document.getElementById('adminDiv');
-const tabButtons = document.getElementById('tabButtons');
-const sakinSecici = document.getElementById('sakinSecici');
-
-checkSession();
-
-// SEKME YÖNETİMİ
-window.showTab = function(tabName) {
-    document.getElementById('kayitlarTab').style.display = tabName === 'kayitlar' ? 'block' : 'none';
-    document.getElementById('sakinlerTab').style.display = tabName === 'sakinler' ? 'block' : 'none';
-    document.getElementById('tab-kayitlar').classList.toggle('active', tabName === 'kayitlar');
-    document.getElementById('tab-sakinler').classList.toggle('active', tabName === 'sakinler');
-}
+(async () => {
+    checkSession();
+})();
 
 async function checkSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
-    const isLoggedIn = !!session;
-    loginDiv.style.display = isLoggedIn ? 'none' : 'flex';
-    document.getElementById('timerDisplay').style.display = isLoggedIn ? 'flex' : 'none';
-    tabButtons.style.display = isLoggedIn ? 'flex' : 'none';
-    adminDiv.style.display = isLoggedIn ? 'block' : 'none';
-    if (isLoggedIn) { resetInactivityTimer(); loadSakinlerIntoSelect(); }
-    listeleVeriler();
-    listeleSakinler();
-}
-
-// SAKİN YÖNETİMİ
-async function loadSakinlerIntoSelect() {
-    const { data } = await supabaseClient.from('sakinler').select('*').order('daire_no');
-    // En başa Ortak Alan seçeneğini ekliyoruz
-    sakinSecici.innerHTML = '<option value="Ortak Alan / Apartman">Ortak Alan / Apartman</option>';
-    data?.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = `Daire ${s.daire_no} - ${s.ad_soyad}`;
-        opt.innerText = `Daire ${s.daire_no}: ${s.ad_soyad}`;
-        sakinSecici.appendChild(opt);
-    });
-}
-
-document.getElementById('sakinEkleBtn').onclick = async () => {
-    const ad = document.getElementById('sakinAd').value.trim();
-    const no = parseInt(document.getElementById('daireNo').value);
-    if(!ad || isNaN(no)) return alert("İsim ve daire no giriniz!");
-    if(no < 1 || no > 12) return alert("Daire 1-12 arası olmalı!");
-
-    const { error } = await supabaseClient.from('sakinler').insert([{ ad_soyad: ad, daire_no: no.toString() }]);
-    if (error) alert("Hata: " + error.message);
-    else {
-        document.getElementById('sakinAd').value = '';
-        document.getElementById('daireNo').value = '';
-        listeleSakinler(); loadSakinlerIntoSelect();
+    const isOk = !!session;
+    
+    document.getElementById('loginDiv').style.display = isOk ? 'none' : 'flex';
+    document.getElementById('timerDisplay').style.display = isOk ? 'flex' : 'none';
+    document.getElementById('tabButtons').style.display = isOk ? 'flex' : 'none';
+    document.getElementById('adminDiv').style.display = isOk ? 'block' : 'none';
+    
+    if(isOk) {
+        startTimer();
+        loadSakinlerData();
+        setToday();
     }
-};
-
-async function listeleSakinler() {
-    const { data } = await supabaseClient.from('sakinler').select('*').order('daire_no');
-    const liste = document.getElementById('sakinListesi');
-    liste.innerHTML = '';
-    data?.forEach(s => {
-        const li = document.createElement('li');
-        li.innerHTML = `<div class="item-content"><b>Daire ${s.daire_no}</b>: ${s.ad_soyad}</div>
-                        <button class="btn-delete" onclick="sakinSil(${s.id})">Sil</button>`;
-        liste.appendChild(li);
-    });
+    fetchData();
 }
 
-window.sakinSil = async (id) => {
-    if(confirm("Silinsin mi?")) {
-        await supabaseClient.from('sakinler').delete().eq('id', id);
-        listeleSakinler(); loadSakinlerIntoSelect();
-    }
-};
+function startTimer() {
+    clearInterval(countdownInterval);
+    countdownInterval = setInterval(() => {
+        remainingTime--;
+        let m = Math.floor(remainingTime / 60), s = remainingTime % 60;
+        document.getElementById('countdown').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+        if (remainingTime <= 0) location.reload();
+    }, 1000);
+}
 
-// İŞLEM KAYITLARI (TUTAR VE DETAY AYRIMI)
-document.getElementById('ekleBtn').onclick = async () => {
-    const s = sakinSecici.value;
-    const k = document.getElementById('kategori').value;
-    const t = document.getElementById('tutar').value;
-    const d = document.getElementById('detay').value;
+function setToday() {
+    document.getElementById('islemTarihi').value = new Date().toISOString().split('T')[0];
+}
 
-    if(!k || !t || !d) return alert("Lütfen kategori, tutar ve detay alanlarını doldurun!");
-
-    // Başlık ve Açıklamayı düzenliyoruz
-    const tamBaslik = `${s} | ${k}`;
-    const tamAciklama = `${t} TL - ${d}`;
-
-    await supabaseClient.from('veriler').insert([{ baslik: tamBaslik, aciklama: tamAciklama }]);
-    document.getElementById('tutar').value = '';
-    document.getElementById('detay').value = '';
+async function fetchData() {
+    const { data } = await supabaseClient.from('veriler').select('*').order('created_at', { ascending: false });
+    rawData = data || [];
     listeleVeriler();
-};
+}
 
-async function listeleVeriler() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    const { data } = await supabaseClient.from('veriler').select('*').order('id', { ascending: false });
-    document.getElementById('dataCount').innerText = `${data ? data.length : 0} Kayıt`;
+window.listeleVeriler = () => {
+    const search = document.getElementById('searchFilter').value.toLowerCase();
+    const daire = document.getElementById('daireFilter').value;
+    const year = document.getElementById('yearFilter').value;
+    const type = document.getElementById('typeFilter').value;
+    const wallet = document.getElementById('walletFilter').value;
+    
+    let filtered = rawData.filter(item => {
+        const itemYear = new Date(item.created_at).getFullYear().toString();
+        const isGelir = item.baslik.includes('Aidat');
+        return (item.baslik.toLowerCase().includes(search) || item.aciklama.toLowerCase().includes(search)) &&
+               (daire === 'all' || item.baslik.includes(daire)) &&
+               (year === 'all' || itemYear === year) &&
+               (type === 'all' || (type === 'gelir' && isGelir) || (type === 'gider' && !isGelir)) &&
+               (wallet === 'all' || item.aciklama.includes(`[${wallet}]`));
+    });
+    renderUI(filtered);
+}
+
+function renderUI(data) {
+    let b = 0, n = 0;
     const liste = document.getElementById('veriListesi');
     liste.innerHTML = '';
-    data?.forEach(item => {
-        const li = document.createElement('li');
-        // TL kısmını kalınlaştırarak gösteriyoruz
-        li.innerHTML = `<div class="item-content">
-                            <strong>${item.baslik}</strong><br>
-                            <span style="color:#00b894; font-weight:bold;">${item.aciklama.split(' - ')[0]}</span> - ${item.aciklama.split(' - ')[1] || ''}
-                        </div>`;
-        if(!!session) li.innerHTML += `<button class="btn-delete" onclick="deleteItem(${item.id})">Sil</button>`;
-        liste.appendChild(li);
+
+    rawData.forEach(item => {
+        const t = parseFloat(item.aciklama) || 0;
+        const isGelir = item.baslik.includes('Aidat');
+        const isBanka = item.aciklama.includes('[Banka]');
+        if (isGelir) { if(isBanka) b += t; else n += t; } else { if(isBanka) b -= t; else n -= t; }
+    });
+
+    data.forEach(item => {
+        const isGelir = item.baslik.includes('Aidat');
+        const isBanka = item.aciklama.includes('[Banka]');
+        const itemColor = isBanka ? '#6366f1' : '#f59e0b';
+        const sysDate = new Date(item.created_at).toLocaleDateString('tr-TR');
+        const parts = item.baslik.split(' | ');
+        const islemTarihi = parts[0]; 
+        const asilBaslik = parts.slice(1).join(' | ');
+
+        liste.innerHTML += `
+            <li style="border-left: 6px solid ${itemColor}">
+                <div>
+                    <span class="date-badge islem-date">📅 İşlem: ${islemTarihi}</span>
+                    <span class="date-badge kayit-date">📝 Kayıt: ${sysDate}</span>
+                    <br><strong style="color:${isGelir?'#10b981':'#ef4444'}">${asilBaslik}</strong><br>
+                    <small>${item.aciklama}</small>
+                </div>
+                <div class="item-actions">
+                    <span style="font-weight:800;">${parseFloat(item.aciklama).toLocaleString()} TL</span>
+                    <button class="edit-btn" onclick="editItem(${item.id})">✎</button>
+                    <button class="del-btn" onclick="deleteItem(${item.id})">✖</button>
+                </div>
+            </li>`;
+    });
+    
+    document.getElementById('totalBanka').innerText = b.toLocaleString('tr-TR') + " TL";
+    document.getElementById('totalNakit').innerText = n.toLocaleString('tr-TR') + " TL";
+    document.getElementById('totalGenel').innerText = (b + n).toLocaleString('tr-TR') + " TL";
+}
+
+document.getElementById('ekleBtn').onclick = async () => {
+    const t = document.getElementById('tutar').value;
+    const tarih = document.getElementById('islemTarihi').value;
+    const detay = document.getElementById('detay').value;
+    if(!t || !tarih) return alert("Tutar ve Tarih girin!");
+
+    const trTarih = tarih.split('-').reverse().join('.');
+    await supabaseClient.from('veriler').insert([{ 
+        baslik: `${trTarih} | ${document.getElementById('sakinSecici').value} | ${document.getElementById('kategori').value}`, 
+        aciklama: `${t} TL [${document.getElementById('kasaTipi').value}] - ${detay}` 
+    }]);
+
+    document.getElementById('tutar').value = '';
+    document.getElementById('detay').value = '';
+    fetchData();
+};
+
+window.deleteItem = async (id) => { if(confirm("Silinsin mi?")) { await supabaseClient.from('veriler').delete().eq('id', id); fetchData(); } }
+
+window.editItem = async (id) => {
+    const val = prompt("Yeni tutarı girin:");
+    if(val && !isNaN(val)) {
+        const item = rawData.find(x => x.id === id);
+        const yeniAciklama = item.aciklama.replace(parseFloat(item.aciklama), val);
+        await supabaseClient.from('veriler').update({ aciklama: yeniAciklama }).eq('id', id);
+        fetchData();
+    }
+}
+
+// SAKİN İŞLEMLERİ
+async function loadSakinlerData() {
+    const { data } = await supabaseClient.from('sakinler').select('*').order('daire_no');
+    const sel = document.getElementById('sakinSecici');
+    const fil = document.getElementById('daireFilter');
+    const list = document.getElementById('sakinListesi');
+    
+    sel.innerHTML = '<option value="Genel">Apartman Ortak</option>';
+    fil.innerHTML = '<option value="all">Tüm Daireler</option>';
+    list.innerHTML = '';
+
+    data?.forEach(s => {
+        const txt = `Daire ${s.daire_no} - ${s.ad_soyad}`;
+        sel.innerHTML += `<option value="${txt}">${txt}</option>`;
+        fil.innerHTML += `<option value="Daire ${s.daire_no}">Daire ${s.daire_no}</option>`;
+        list.innerHTML += `
+            <li>
+                <span>${txt}</span>
+                <div class="item-actions">
+                    <button class="edit-btn" onclick="editSakin(${s.id}, '${s.ad_soyad}', ${s.daire_no})">✎</button>
+                    <button class="del-btn" onclick="deleteSakin(${s.id})">✖</button>
+                </div>
+            </li>`;
     });
 }
 
-window.deleteItem = async (id) => {
-    if(confirm('Silinsin mi?')) { await supabaseClient.from('veriler').delete().eq('id', id); listeleVeriler(); }
-};
-
-// GİRİŞ/ÇIKIŞ
-document.getElementById('loginBtn').onclick = async () => {
-    const e = document.getElementById('email').value;
-    const p = document.getElementById('password').value;
-    const { error } = await supabaseClient.auth.signInWithPassword({ email: e, password: p });
-    if (error) alert("Hata: " + error.message); else checkSession();
-};
-
-document.getElementById('topLogoutBtn').onclick = async () => {
-    await supabaseClient.auth.signOut(); location.reload();
-};
-
-function resetInactivityTimer() {
-    stopTimers();
-    remainingTime = SESSION_TIME;
-    countdownTimer = setInterval(() => {
-        remainingTime--;
-        document.getElementById('countdown').innerText = Math.floor(remainingTime/60) + ":" + (remainingTime%60).toString().padStart(2,'0');
-        if(remainingTime <= 0) location.reload();
-    }, 1000);
-    inactivityTimer = setTimeout(async () => { await supabaseClient.auth.signOut(); location.reload(); }, SESSION_TIME*1000);
+document.getElementById('sakinKaydetBtn').onclick = async () => {
+    const no = document.getElementById('inputDaireNo').value;
+    const ad = document.getElementById('inputAdSoyad').value;
+    if(no && ad) {
+        await supabaseClient.from('sakinler').insert([{ daire_no: no, ad_soyad: ad }]);
+        document.getElementById('inputDaireNo').value = '';
+        document.getElementById('inputAdSoyad').value = '';
+        loadSakinlerData();
+    }
 }
-function stopTimers() { clearTimeout(inactivityTimer); clearInterval(countdownTimer); }
+
+window.editSakin = async (id, ad, no) => {
+    const yeniAd = prompt("Yeni Ad Soyad:", ad);
+    const yeniNo = prompt("Yeni Daire No:", no);
+    if(yeniAd && yeniNo) {
+        await supabaseClient.from('sakinler').update({ ad_soyad: yeniAd, daire_no: yeniNo }).eq('id', id);
+        loadSakinlerData();
+    }
+}
+
+window.deleteSakin = async (id) => { if(confirm("Sakini siliyorum?")) { await supabaseClient.from('sakinler').delete().eq('id', id); loadSakinlerData(); } }
+
+window.showTab = (n) => {
+    ['kayitlarTab','sakinlerTab'].forEach(x => document.getElementById(x).style.display='none');
+    ['tab-kayitlar','tab-sakinler'].forEach(x => document.getElementById(x).classList.remove('active'));
+    document.getElementById(n+'Tab').style.display='block';
+    document.getElementById('tab-'+n).classList.add('active');
+}
+
+document.getElementById('loginBtn').onclick = async () => {
+    await supabaseClient.auth.signInWithPassword({ email: document.getElementById('email').value, password: document.getElementById('password').value });
+    checkSession();
+}
+
+document.getElementById('topLogoutBtn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
