@@ -1,42 +1,64 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
 body { background: #f1f5f9; color: #0f172a; padding-bottom: 50px; }
 
+/* Header */
 .main-header { background: #fff; border-bottom: 3px solid #3b82f6; padding: 15px 0; position: sticky; top: 0; z-index: 1000; }
-.header-container { max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; }
+.header-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; }
 .logo { font-size: 22px; font-weight: 800; }
 .logo span { color: #3b82f6; }
+.header-auth { display: flex; gap: 5px; }
+.header-auth input { padding: 8px; width: 130px; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 6px; }
+.header-auth button { background: #3b82f6; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; }
 
-.timer-box { background: #fee2e2; color: #ef4444; padding: 6px 15px; border-radius: 30px; font-weight: 800; font-size: 13px; border: 1px solid #fecaca; }
-.header-admin-tools { display: flex; align-items: center; gap: 15px; }
+.timer-box { background: #fee2e2; color: #ef4444; padding: 8px 15px; border-radius: 30px; font-weight: 800; font-size: 12px; }
+.logout-btn { background: #fff; color: #ef4444; border: 1px solid #ef4444; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; margin-left: 10px; }
 
-.logout-btn { background: #fff; color: #ef4444; border: 2px solid #ef4444; padding: 8px 15px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.3s; }
-.logout-btn:hover { background: #ef4444; color: #fff; }
+/* Main Layout */
+.container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px; }
+.stat-card { background: #fff; padding: 25px; border-radius: 18px; text-align: center; border-bottom: 5px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.bakiye { border-color: #1e293b; } .banka { border-color: #6366f1; color: #6366f1; } .nakit { border-color: #f59e0b; color: #f59e0b; }
 
-.fancy-btn { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-.fancy-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3); }
+.tab-container { display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; }
+.tab-btn { padding: 14px 24px; border: none; background: #e2e8f0; cursor: pointer; border-radius: 12px; font-weight: 700; color: #475569; white-space: nowrap; transition: 0.2s; }
+.tab-btn.active { background: #3b82f6; color: #fff; transform: translateY(-2px); }
 
-.container { max-width: 1100px; margin: 20px auto; padding: 0 20px; }
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
-.stat-card { background: #fff; padding: 20px; border-radius: 15px; text-align: center; border-bottom: 4px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-.bakiye { border-color: #1e293b; } 
-.banka { border-color: #6366f1; color: #6366f1; } 
-.nakit { border-color: #f59e0b; color: #f59e0b; }
+/* Excel Table */
+.table-header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #fff; padding: 15px; border-radius: 12px; border-left: 5px solid #3b82f6; }
+.table-responsive { background: #fff; border-radius: 15px; overflow-x: auto; padding: 15px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.excel-table { width: 100%; border-collapse: collapse; min-width: 900px; font-size: 13px; }
+.excel-table th, .excel-table td { border: 1px solid #e2e8f0; padding: 12px 8px; text-align: center; }
+.excel-table th { background: #f8fafc; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+.excel-table td:first-child { text-align: left; font-weight: 700; background: #f8fafc; position: sticky; left: 0; z-index: 10; border-right: 2px solid #3b82f6; }
+.paid-cell { 
+    background: #dcfce7 !important; 
+    color: #15803d; 
+    font-weight: 700; 
+    line-height: 1.2; /* Satır aralığını daralt ki tarih ve tutar sığsın */
+}
 
-.filter-section { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
-.filter-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 8px; }
-.tab-container { display: flex; gap: 8px; margin-bottom: 20px; }
-.tab-btn { padding: 12px 20px; border: none; background: #e2e8f0; cursor: pointer; border-radius: 10px; font-weight: 700; color: #475569; }
-.tab-btn.active { background: #3b82f6; color: #fff; }
+/* Eski tik işaretini kaldırıyoruz çünkü artık tarih/tutar yazıyor */
+.paid-cell::after { 
+    content: "" !important; 
+}
 
-.add-data-section { background: #fff; padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 6px solid #10b981; }
-.input-grid-large { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 15px; }
-input, select { padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; }
+/* Form & Lists */
+.filter-section { background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.filter-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 10px; }
+.add-data-section { background: #fff; padding: 25px; border-radius: 18px; margin-bottom: 20px; border-left: 8px solid #10b981; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.input-grid-large { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 15px; }
+input, select { padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; outline: none; }
+input:focus, select:focus { border-color: #3b82f6; ring: 2px #3b82f6; }
 
-li { background: #fff; margin-bottom: 10px; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
-.item-actions { display: flex; align-items: center; gap: 12px; }
-.del-btn { color: #ef4444; cursor: pointer; font-size: 18px; border: none; background: none; }
-.edit-btn { color: #3b82f6; cursor: pointer; font-size: 18px; border: none; background: none; }
+.fancy-btn { background: #10b981; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.3s; }
+.fancy-btn:hover { opacity: 0.9; transform: scale(1.02); }
 
-.date-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; margin-right: 5px; font-weight: 700; }
-.islem-date { background: #e0f2fe; color: #0369a1; }
+li { background: #fff; margin-bottom: 10px; padding: 15px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s; }
+li:hover { transform: translateX(5px); }
+.item-actions { display: flex; align-items: center; gap: 15px; }
+.del-btn, .edit-btn { border: none; background: #f1f5f9; cursor: pointer; font-size: 16px; padding: 8px; border-radius: 8px; transition: 0.2s; }
+.del-btn:hover { background: #fee2e2; color: #ef4444; }
+.edit-btn:hover { background: #e0f2fe; color: #3b82f6; }
+.date-badge { font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+.islem-date { background: #e0f2fe; color: #0369a1; margin-bottom: 5px; display: inline-block; }
 .kayit-date { background: #f1f5f9; color: #64748b; }

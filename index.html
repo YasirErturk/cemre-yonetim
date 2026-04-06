@@ -12,10 +12,8 @@
 <header class="main-header">
     <div class="header-container">
         <div class="logo-area">
-            <div class="logo">Cemre<span>Apartmanı</span></div>
-            <div id="adminBadge" class="admin-info">
-                <span>Yönetim Paneli</span>
-            </div>
+            <!-- Tıklayınca hem sayfayı yenilemez hem de "Hareketler" sekmesini açar -->
+<div class="logo" onclick="showTab('kayitlar')" style="cursor:pointer">Cemre<span>Apartmanı</span></div>
         </div>
         <div id="loginDiv" class="header-auth">
             <input type="email" id="email" placeholder="E-posta">
@@ -23,47 +21,51 @@
             <button id="loginBtn">Giriş</button>
         </div>
         <div id="timerDisplay" class="header-admin-tools" style="display:none;">
-            <div class="timer-box">Süre: <span id="countdown">10:00</span></div>
+            <div class="timer-box">Oturum: <span id="countdown">10:00</span></div>
             <button id="topLogoutBtn" class="logout-btn">Güvenli Çıkış</button>
         </div>
     </div>
 </header>
 
 <main class="container">
-    <div class="stats-grid">
-        <div class="stat-card bakiye"><small>Genel Kasa</small><h2 id="totalGenel">0.00 TL</h2></div>
-        <div class="stat-card banka"><small>Banka Hesabı</small><h2 id="totalBanka">0.00 TL</h2></div>
-        <div class="stat-card nakit"><small>Eldeki Nakit</small><h2 id="totalNakit">0.00 TL</h2></div>
-    </div>
+    <!-- Özet Kartları -->
+<div class="stats-grid">
+    <div class="stat-card bakiye"><small>Genel Kasa</small><h2 id="totalGenel">0.00 TL</h2></div>
+    <div class="stat-card banka"><small>Havale / EFT Hesabı</small><h2 id="totalBanka">0.00 TL</h2></div>
+    <div class="stat-card nakit"><small>Nakit</small><h2 id="totalNakit">0.00 TL</h2></div>
+</div>
 
-    <section class="filter-section">
-        <div class="filter-grid">
-            <input type="text" id="searchFilter" placeholder="İşlem ara..." oninput="listeleVeriler()">
-            <select id="daireFilter" onchange="listeleVeriler()"><option value="all">Tüm Daireler</option></select>
-            <select id="yearFilter" onchange="listeleVeriler()">
-                <option value="all">Tüm Yıllar</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-            </select>
-            <select id="typeFilter" onchange="listeleVeriler()">
-                <option value="all">Gelir / Gider</option>
-                <option value="gelir">Gelirler</option>
-                <option value="gider">Giderler</option>
-            </select>
-            <select id="walletFilter" onchange="listeleVeriler()">
-                <option value="all">Kasa Tipi</option>
-                <option value="Banka">Banka</option>
-                <option value="Nakit">Nakit</option>
-            </select>
-        </div>
-    </section>
-
+    <!-- Sekme Menüsü -->
     <div id="tabButtons" class="tab-container" style="display:none;">
         <button id="tab-kayitlar" class="tab-btn active" onclick="showTab('kayitlar')">Hareketler</button>
+        <button id="tab-odeme-tablosu" class="tab-btn" onclick="showTab('odeme-tablosu')">Ödeme Tablosu</button>
         <button id="tab-sakinler" class="tab-btn" onclick="showTab('sakinler')">Sakinler</button>
     </div>
 
+    <!-- 1. SEKME: HAREKETLER -->
     <div id="kayitlarTab">
+        <section class="filter-section">
+            <div class="filter-grid">
+                <input type="text" id="searchFilter" placeholder="İşlem ara..." oninput="listeleVeriler()">
+                <select id="daireFilter" onchange="listeleVeriler()"><option value="all">Tüm Daireler</option></select>
+                <select id="yearFilter" onchange="listeleVeriler()">
+                    <option value="all">Tüm Yıllar</option>
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
+                </select>
+                <select id="typeFilter" onchange="listeleVeriler()">
+                    <option value="all">Gelir / Gider</option>
+                    <option value="Aidat">Aidat Geliri</option>
+                    <option value="Gider">Giderler</option>
+                </select>
+                <select id="walletFilter" onchange="listeleVeriler()">
+                    <option value="all">Kasa Tipi</option>
+                    <option value="Havale/EFT">Havale/EFT</option>
+                    <option value="Nakit">Nakit</option>
+                </select>
+            </div>
+        </section>
+
         <section id="adminDiv" class="add-data-section" style="display:none;">
             <h3>Yeni İşlem Kaydı</h3>
             <div class="input-grid-large">
@@ -74,7 +76,10 @@
                     <option value="Gider">Genel Gider</option>
                     <option value="Fatura">Fatura Ödemesi</option>
                 </select>
-                <select id="kasaTipi"><option value="Banka">Banka</option><option value="Nakit">Nakit</option></select>
+                <select id="kasaTipi">
+    <option value="Havale/EFT">Havale / EFT</option>
+    <option value="Nakit">Nakit</option>
+</select>
                 <input type="number" id="tutar" placeholder="Tutar">
                 <input type="text" id="detay" placeholder="Açıklama">
                 <button id="ekleBtn" class="fancy-btn">KAYDET</button>
@@ -83,13 +88,31 @@
         <ul id="veriListesi"></ul>
     </div>
 
+    <!-- 2. SEKME: ÖDEME TABLOSU -->
+    <div id="odeme-tablosuTab" style="display:none;">
+        <div class="table-header-box">
+            <h3>Yıllık Aidat Takip Çizelgesi</h3>
+            <select id="tableYearFilter" onchange="renderPaymentTable()">
+                <option value="2025">2025 Yılı</option>
+                <option value="2026" selected>2026 Yılı</option>
+            </select>
+        </div>
+        <div class="table-responsive">
+            <table class="excel-table">
+                <thead><tr id="tableHead"></tr></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 3. SEKME: SAKİNLER -->
     <div id="sakinlerTab" style="display:none;">
         <section class="add-data-section" style="border-left-color: #f59e0b">
             <h3>Sakin Tanımla</h3>
             <div class="input-grid-large">
                 <input type="number" id="inputDaireNo" placeholder="Daire No">
                 <input type="text" id="inputAdSoyad" placeholder="Ad Soyad">
-                <button id="sakinKaydetBtn" style="background:#f59e0b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Ekle</button>
+                <button id="sakinKaydetBtn" class="fancy-btn" style="background:#f59e0b">EKLE</button>
             </div>
         </section>
         <ul id="sakinListesi"></ul>
