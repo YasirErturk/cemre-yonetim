@@ -45,17 +45,7 @@ body { background: #f1f5f9; color: #0f172a; padding-bottom: 50px; }
 .filter-grid input[type="text"] {
     grid-column: span 2; 
 }
-.add-data-section {
-    background: #fff;
-    padding: 25px;
-    border-radius: 18px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    
-    /* YENİ RENKLİ KENARLIK */
-    border-left: 8px solid;
-    border-image: linear-gradient(to bottom, #3b82f6, #10b981) 1;
-}
+.add-data-section { background: #fff; padding: 25px; border-radius: 18px; margin-bottom: 20px; border-left: 8px solid #10b981; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 .input-grid-large { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 15px; }
 input, select { padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; outline: none; }
 input:focus, select:focus { border-color: #3b82f6; }
