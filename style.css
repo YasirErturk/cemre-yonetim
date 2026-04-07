@@ -35,7 +35,11 @@ body { background: #f1f5f9; color: #0f172a; padding-bottom: 50px; }
 
 /* Form & Lists */
 .filter-section { background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.filter-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 10px; }
+filter-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+    gap: 10px; 
+}
 .add-data-section { background: #fff; padding: 25px; border-radius: 18px; margin-bottom: 20px; border-left: 8px solid #10b981; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 .input-grid-large { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 15px; }
 input, select { padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; outline: none; }

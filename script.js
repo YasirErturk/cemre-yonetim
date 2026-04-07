@@ -139,6 +139,25 @@ document.getElementById('ekleBtn').onclick = async () => {
     document.getElementById('tutar').value = ''; document.getElementById('detay').value = ''; fetchData();
 };
 
+// YENİ SAKİN EKLEME BUTONU İŞLEVİ
+document.getElementById('sakinKaydetBtn').onclick = async () => {
+    const no = document.getElementById('inputDaireNo').value;
+    const ad = document.getElementById('inputAdSoyad').value;
+    
+    if(!no || !ad) return alert("Daire No ve Ad Soyad boş bırakılamaz!");
+    
+    // Veritabanına kaydet
+    await supabaseClient.from('sakinler').insert([{ daire_no: parseInt(no), ad_soyad: ad }]);
+    
+    // Kutucukları temizle
+    document.getElementById('inputDaireNo').value = ''; 
+    document.getElementById('inputAdSoyad').value = ''; 
+    
+    // Listeleri ve tabloyu güncelle
+    await loadSakinlerData(); 
+    renderPaymentTable();
+};
+
 async function loadSakinlerData() {
     const { data } = await supabaseClient.from('sakinler').select('*').order('daire_no');
     sakinlerData = data || [];
