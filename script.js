@@ -1,32 +1,22 @@
-// Supabase Yapılandırması
 const SUPABASE_URL = 'https://daruffqlidfrhbwswopn.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_8CQ-97MUtgaTGkgOo2xFcg_3ZijKORD';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const SESSION_TIME = 10 * 60; // 10 Dakika
-let remainingTime = SESSION_TIME;
-let countdownInterval, rawData = [], sakinlerData = [];
-
+const SESSION_TIME = 10 * 60;
+let remainingTime = SESSION_TIME, countdownInterval, rawData = [], sakinlerData = [], currentUserEmail = 'Bilinmiyor';
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
-// Başlatıcı
-(async () => {
-    checkSession();
-})();
+(async () => { checkSession(); })();
 
-// Oturum Yönetimi
 async function checkSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     const isOk = !!session;
-    
     document.getElementById('loginDiv').style.display = isOk ? 'none' : 'flex';
     document.getElementById('timerDisplay').style.display = isOk ? 'flex' : 'none';
-    document.getElementById('tabButtons').style.display = isOk ? 'flex' : 'none';
     document.getElementById('adminDiv').style.display = isOk ? 'block' : 'none';
-    
-    await loadSakinlerData();
-    if(isOk) { startTimer(); setToday(); }
-    fetchData();
+    document.getElementById('sakinEkleDiv').style.display = isOk ? 'block' : 'none';
+    if(isOk) { currentUserEmail = session.user.email; startTimer(); setToday(); }
+    await loadSakinlerData(); fetchData();
 }
 
 function startTimer() {
@@ -41,15 +31,16 @@ function startTimer() {
 
 function setToday() { document.getElementById('islemTarihi').value = new Date().toISOString().split('T')[0]; }
 
-// Veri Çekme
+// Veri çekerken tarih sütun ismindeki olası 'i' harfi farkını yönetmek için helper
+const getTarih = (item) => item.islem_tarihi || item.islem_tarih;
+
 async function fetchData() {
-    const { data } = await supabaseClient.from('veriler').select('*').order('created_at', { ascending: false });
+    // Hem islem_tarihi hem islem_tarih (DB'deki haline göre) sorgulamayı garantiye alıyoruz
+    const { data } = await supabaseClient.from('veriler').select('*').order('islem_tarihi', { ascending: false }).order('created_at', { ascending: false });
     rawData = data || [];
     listeleVeriler();
-    renderPaymentTable();
 }
 
-// Filtreleme ve Arayüz
 window.listeleVeriler = () => {
     const search = document.getElementById('searchFilter').value.toLowerCase();
     const daire = document.getElementById('daireFilter').value;
@@ -58,14 +49,17 @@ window.listeleVeriler = () => {
     const wallet = document.getElementById('walletFilter').value;
     
     let filtered = rawData.filter(item => {
-        const d = item.islem_tarihi ? new Date(item.islem_tarihi) : null;
+        const itemSakin = item.sakin_bilgisi || (item.baslik ? item.baslik.split(' | ')[1] : '');
+        const itemDetay = item.detay || item.aciklama || '';
+        const itemKasa = item.kasa_tipi || (item.aciklama && item.aciklama.includes('Nakit') ? 'Nakit' : 'Havale/EFT');
+        const dStr = getTarih(item);
+        const d = dStr ? new Date(dStr) : null;
         const itemYear = d ? d.getFullYear().toString() : "all";
-        
-        return (item.baslik.toLowerCase().includes(search) || item.aciklama.toLowerCase().includes(search)) &&
+        return `${itemSakin} ${itemDetay} ${item.kategori}`.toLowerCase().includes(search) &&
                (daire === 'all' || item.daire_no == daire.replace('Daire ','')) &&
                (year === 'all' || itemYear === year) &&
                (type === 'all' || item.kategori === type) &&
-               (wallet === 'all' || item.aciklama.includes(`[${wallet}]`));
+               (wallet === 'all' || itemKasa === wallet);
     });
     renderUI(filtered);
 }
@@ -74,176 +68,182 @@ function renderUI(data) {
     let b = 0, n = 0;
     const liste = document.getElementById('veriListesi');
     liste.innerHTML = '';
-    const isVisible = document.getElementById('adminDiv').style.display === 'block';
+    const isAdmin = document.getElementById('timerDisplay').style.display === 'flex';
 
     rawData.forEach(item => {
-        const t = parseFloat(item.aciklama) || 0;
-        const isGelir = item.baslik.includes('Aidat') || item.kategori === 'Aidat';
-        const isBanka = item.aciklama.includes('[Havale/EFT]');
-        if (isGelir) { if(isBanka) b += t; else n += t; } else { if(isBanka) b -= t; else n -= t; }
+        const valTutar = item.tutar !== null ? parseFloat(item.tutar) : (parseFloat(item.aciklama) || 0);
+        const isGelir = item.kategori === 'Aidat';
+        const isBanka = (item.kasa_tipi || (item.aciklama && item.aciklama.includes('Havale/EFT'))) === 'Havale/EFT';
+        if (isGelir) { if(isBanka) b += valTutar; else n += valTutar; } 
+        else { if(isBanka) b -= valTutar; else n -= valTutar; }
     });
 
     data.forEach(item => {
+        const valTutar = item.tutar !== null ? parseFloat(item.tutar) : (parseFloat(item.aciklama) || 0);
+        const valSakin = item.sakin_bilgisi || (item.baslik ? item.baslik.split(' | ')[1] : 'Bilinmiyor');
+        const valKasa = item.kasa_tipi || (item.aciklama && item.aciklama.includes('Nakit') ? 'Nakit' : 'Havale/EFT');
+        const valDetay = item.detay || (item.aciklama ? item.aciklama.split('] - ').slice(1).join('] - ') : '');
         const isGelir = item.kategori === 'Aidat';
-        const isBanka = item.aciklama.includes('[Havale/EFT]');
-        const itemColor = isBanka ? '#6366f1' : '#f59e0b';
-        const sysDate = new Date(item.created_at).toLocaleDateString('tr-TR');
-        const islemTarihi = item.islem_tarihi ? item.islem_tarihi.split('-').reverse().join('.') : "---";
-
-        const actionButtons = isVisible ? `
-            <button class="edit-btn" onclick="editItem(${item.id})">✎</button>
-            <button class="del-btn" onclick="deleteItem(${item.id})">✖</button>` : '';
+        const borderCol = valKasa === 'Havale/EFT' ? '#6366f1' : '#f59e0b';
+        const dStr = getTarih(item);
 
         liste.innerHTML += `
-            <li style="border-left: 6px solid ${itemColor}">
-                <div>
-                    <span class="date-badge islem-date">📅 İşlem: ${islemTarihi}</span>
-                    <span class="date-badge kayit-date">📝 Kayıt: ${sysDate}</span><br>
-                    <strong style="color:${isGelir?'#10b981':'#ef4444'}">${item.baslik.split(' | ').slice(1).join(' | ')}</strong><br>
-                    <small>${item.aciklama}</small>
+            <li style="border-left: 6px solid ${borderCol}; cursor: ${isAdmin?'pointer':'default'}" ${isAdmin?`ondblclick="openHareketModal(${item.id})"`:''}>
+                <div style="flex:1;">
+                    <span class="date-badge islem-date">${dStr ? dStr.split('-').reverse().join('.') : ''}</span>
+                    <br><strong style="color:${isGelir?'#10b981':'#ef4444'}">${valSakin} | ${item.kategori}</strong><br>
+                    <small><b>[${valKasa==='Havale/EFT'?'Banka':valKasa}]</b> - ${valDetay}</small>
                 </div>
-                <div class="item-actions">
-                    <span style="font-weight:800;">${parseFloat(item.aciklama).toLocaleString()} TL</span>
-                    ${actionButtons}
-                </div>
+                <div style="font-weight:800; font-size:16px;">${valTutar.toLocaleString('tr-TR')} TL</div>
             </li>`;
     });
     
-    document.getElementById('totalBanka').innerText = b.toLocaleString('tr-TR', {minimumFractionDigits:2}) + " TL";
-    document.getElementById('totalNakit').innerText = n.toLocaleString('tr-TR', {minimumFractionDigits:2}) + " TL";
-    document.getElementById('totalGenel').innerText = (b + n).toLocaleString('tr-TR', {minimumFractionDigits:2}) + " TL";
+    document.getElementById('totalBanka').innerText = b.toLocaleString('tr-TR') + " TL";
+    document.getElementById('totalNakit').innerText = n.toLocaleString('tr-TR') + " TL";
+    document.getElementById('totalGenel').innerText = (b + n).toLocaleString('tr-TR') + " TL";
 }
 
-// ÖDEME TABLOSU (Detaylı Görünüm: Tarih + Tutar)
-function renderPaymentTable() {
-    const seciliYil = document.getElementById('tableYearFilter').value;
-    const thead = document.getElementById('tableHead');
-    const tbody = document.getElementById('tableBody');
-    if(!thead || !tbody) return;
+window.openBakiyeModal = (tip) => {
+    const liste = document.getElementById('bakiyeListe');
+    liste.innerHTML = '';
+    document.getElementById('bakiyeModalTitle').innerText = tip === 'Genel' ? 'Genel Kasa İşlemleri' : (tip === 'Havale/EFT' ? 'Banka Hesabı İşlemleri' : 'Nakit İşlemleri');
 
-    // Başlıkları oluştur
-    thead.innerHTML = '<th>Daire / Sakin</th>' + AYLAR.map(ay => `<th>${ay}</th>`).join('');
-    tbody.innerHTML = '';
-
-    sakinlerData.forEach(sakin => {
-        let row = `<tr><td><strong>Daire ${sakin.daire_no}</strong><br><small>${sakin.ad_soyad}</small></td>`;
-        
-        for (let ay = 1; ay <= 12; ay++) {
-            // İlgili aya ait aidat kaydını bul
-            const odeme = rawData.find(item => {
-                if (!item.islem_tarihi || item.kategori !== 'Aidat') return false;
-                const d = new Date(item.islem_tarihi);
-                return item.daire_no == sakin.daire_no && 
-                       (d.getMonth() + 1) === ay && 
-                       d.getFullYear().toString() === seciliYil;
-            });
-
-            if (odeme) {
-                // Tutarı aciklama içinden çek (Örn: "250 TL [Havale/EFT]..." -> "250 TL")
-                const tutar = odeme.aciklama.split(' [')[0]; 
-                // Tarihi formatla (YYYY-MM-DD -> DD.MM)
-                const günAy = odeme.islem_tarihi.split('-').reverse().slice(0,2).join('.');
-                
-                // Hücreye hem tarih hem tutar yaz
-                row += `<td class="paid-cell">
-                            <div style="font-size: 10px; opacity: 0.8;">${günAy}</div>
-                            <div style="font-size: 11px;">${tutar}</div>
-                        </td>`;
-            } else {
-                row += `<td></td>`;
-            }
-        }
-        row += '</tr>';
-        tbody.innerHTML += row;
+    rawData.filter(item => {
+        const itemKasa = item.kasa_tipi || (item.aciklama && item.aciklama.includes('Nakit') ? 'Nakit' : 'Havale/EFT');
+        return tip === 'Genel' || itemKasa === tip;
+    }).forEach(item => {
+        const valTutar = item.tutar !== null ? parseFloat(item.tutar) : (parseFloat(item.aciklama) || 0);
+        const isGelir = item.kategori === 'Aidat';
+        const color = isGelir ? '#10b981' : '#ef4444';
+        const dStr = getTarih(item);
+        liste.innerHTML += `<li style="border-left:5px solid ${color}; background:#f8fafc; margin-bottom:5px; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="flex:1;"><small>${dStr ? dStr.split('-').reverse().join('.') : ''}</small><br><strong>${item.sakin_bilgisi || 'Genel'}</strong></div>
+            <div style="font-weight:800; color:${color}">${isGelir?'+':'-'}${valTutar.toLocaleString('tr-TR')} TL</div>
+        </li>`;
     });
+    document.getElementById('bakiyeModal').style.display = 'flex';
 }
 
-// YENİ İŞLEM EKLE (YENİ SÜTUNLARLA)
 document.getElementById('ekleBtn').onclick = async () => {
-    const t = document.getElementById('tutar').value;
-    const tarih = document.getElementById('islemTarihi').value;
-    const detay = document.getElementById('detay').value;
-    const sakinTxt = document.getElementById('sakinSecici').value;
-    const kategori = document.getElementById('kategori').value;
-    const kasa = document.getElementById('kasaTipi').value;
-
-    if(!t || !tarih) return alert("Eksik bilgi!");
-
-    const daireNo = sakinTxt.match(/Daire (\d+)/) ? parseInt(sakinTxt.match(/Daire (\d+)/)[1]) : null;
-    const trTarih = tarih.split('-').reverse().join('.');
-
-    await supabaseClient.from('veriler').insert([{ 
-        baslik: `${trTarih} | ${sakinTxt} | ${kategori}`, 
-        aciklama: `${t} TL [${kasa}] - ${detay}`,
-        islem_tarihi: tarih,
-        daire_no: daireNo,
-        kategori: kategori
-    }]);
-
-    document.getElementById('tutar').value = '';
-    document.getElementById('detay').value = '';
-    fetchData();
+    const v = {
+        t: document.getElementById('tutar').value,
+        d: document.getElementById('islemTarihi').value,
+        det: document.getElementById('detay').value,
+        sak: document.getElementById('sakinSecici').value,
+        kat: document.getElementById('kategori').value,
+        kas: document.getElementById('kasaTipi').value
+    };
+    if(!v.t || !v.d) return alert("Hata!");
+    const dNo = v.sak.match(/Daire (\d+)/) ? parseInt(v.sak.match(/Daire (\d+)/)[1]) : null;
+    await supabaseClient.from('veriler').insert([{ islem_tarihi: v.d, daire_no: dNo, kategori: v.kat, tutar: parseFloat(v.t), kasa_tipi: v.kas, detay: v.det, sakin_bilgisi: v.sak }]);
+    document.getElementById('tutar').value = ''; document.getElementById('detay').value = ''; fetchData();
 };
 
-// SAKİN YÖNETİMİ
 async function loadSakinlerData() {
     const { data } = await supabaseClient.from('sakinler').select('*').order('daire_no');
     sakinlerData = data || [];
-    const sel = document.getElementById('sakinSecici');
-    const fil = document.getElementById('daireFilter');
-    const list = document.getElementById('sakinListesi');
-    
+    const sel = document.getElementById('sakinSecici'), fil = document.getElementById('daireFilter'), list = document.getElementById('sakinListesi');
     if(!sel) return;
-    sel.innerHTML = '<option value="Genel">Apartman Ortak</option>';
+    sel.innerHTML = '<option value="Genel">Genel</option>';
     fil.innerHTML = '<option value="all">Tüm Daireler</option>';
     list.innerHTML = '';
-
+    const isAdmin = document.getElementById('timerDisplay').style.display === 'flex';
     sakinlerData.forEach(s => {
-        const txt = `Daire ${s.daire_no} - ${s.ad_soyad}`;
-        sel.innerHTML += `<option value="${txt}">${txt}</option>`;
+        const t = `Daire ${s.daire_no} - ${s.ad_soyad}`;
+        sel.innerHTML += `<option value="${t}">${t}</option>`;
         fil.innerHTML += `<option value="Daire ${s.daire_no}">Daire ${s.daire_no}</option>`;
-        const isVisible = document.getElementById('adminDiv').style.display === 'block';
-        const actionBtns = isVisible ? `<div class="item-actions"><button class="edit-btn" onclick="editSakin(${s.id}, '${s.ad_soyad}', ${s.daire_no})">✎</button><button class="del-btn" onclick="deleteSakin(${s.id})">✖</button></div>` : '';
-        list.innerHTML += `<li><span>${txt}</span>${actionBtns}</li>`;
+        const dblClickAction = isAdmin ? `ondblclick="openSakinModal(${s.id}, '${s.ad_soyad}', ${s.daire_no})"` : '';
+        list.innerHTML += `<li style="cursor: ${isAdmin?'pointer':'default'};" ${dblClickAction}><span>${t}</span></li>`;
     });
 }
 
-document.getElementById('sakinKaydetBtn').onclick = async () => {
-    const no = document.getElementById('inputDaireNo').value;
-    const ad = document.getElementById('inputAdSoyad').value;
-    if(no && ad) {
-        await supabaseClient.from('sakinler').insert([{ daire_no: no, ad_soyad: ad }]);
-        document.getElementById('inputDaireNo').value = '';
-        document.getElementById('inputAdSoyad').value = '';
-        await loadSakinlerData();
-        renderPaymentTable();
-    }
+// ÖDEME TABLOSU (Tarih ve Tutar geri getirildi)
+function renderPaymentTable() {
+    const yil = document.getElementById('tableYearFilter').value;
+    const thead = document.getElementById('tableHead'), tbody = document.getElementById('tableBody');
+    thead.innerHTML = `<tr><th>Daire</th>${AYLAR.map(a => `<th>${a}</th>`).join('')}</tr>`;
+    tbody.innerHTML = '';
+    sakinlerData.forEach(s => {
+        let r = `<tr><td>Daire ${s.daire_no}<br><small>${s.ad_soyad}</small></td>`;
+        for(let m=1; m<=12; m++) {
+            const o = rawData.find(i => {
+                const dStr = getTarih(i);
+                if (!dStr) return false;
+                const d = new Date(dStr);
+                return i.daire_no == s.daire_no && i.kategori === 'Aidat' && (d.getMonth() + 1) === m && d.getFullYear() == yil;
+            });
+            if (o) {
+                const dStr = getTarih(o);
+                const formatTarih = dStr ? dStr.split('-').reverse().join('.') : '';
+                r += `<td class="paid-cell"><strong>${o.tutar || o.aciklama} TL</strong><br><small>${formatTarih}</small></td>`;
+            } else {
+                r += `<td></td>`;
+            }
+        }
+        tbody.innerHTML += r + `</tr>`;
+    });
 }
 
-// YARDIMCI FONKSİYONLAR
-window.deleteItem = async (id) => { if(confirm("Silinsin mi?")) { await supabaseClient.from('veriler').delete().eq('id', id); fetchData(); } }
-window.editItem = async (id) => {
-    const val = prompt("Yeni tutar:");
-    if(val && !isNaN(val)) {
-        const item = rawData.find(x => x.id === id);
-        const yeniAciklama = item.aciklama.replace(parseFloat(item.aciklama), val);
-        await supabaseClient.from('veriler').update({ aciklama: yeniAciklama }).eq('id', id);
-        fetchData();
-    }
+// HAREKET MODAL
+window.openHareketModal = (id) => {
+    const i = rawData.find(x => x.id === id);
+    document.getElementById('editHareketSakin').innerHTML = document.getElementById('sakinSecici').innerHTML;
+    document.getElementById('editHareketId').value = id;
+    document.getElementById('editHareketTarihi').value = getTarih(i);
+    document.getElementById('editHareketSakin').value = i.sakin_bilgisi || 'Genel';
+    document.getElementById('editHareketKategori').value = i.kategori;
+    document.getElementById('editHareketKasa').value = i.kasa_tipi || 'Havale/EFT';
+    document.getElementById('editHareketTutar').value = i.tutar || i.aciklama;
+    document.getElementById('editHareketDetay').value = i.detay || '';
+    document.getElementById('hareketModal').style.display = 'flex';
 }
 
-window.showTab = (n) => {
-    ['kayitlarTab','sakinlerTab','odeme-tablosuTab'].forEach(x => document.getElementById(x).style.display='none');
-    ['tab-kayitlar','tab-sakinler','tab-odeme-tablosu'].forEach(x => document.getElementById(x).classList.remove('active'));
-    document.getElementById(n+'Tab').style.display='block';
-    document.getElementById('tab-'+n).classList.add('active');
-    if(n === 'odeme-tablosu') renderPaymentTable();
+window.saveHareket = async () => {
+    const id = document.getElementById('editHareketId').value;
+    const dNo = document.getElementById('editHareketSakin').value.match(/Daire (\d+)/) ? parseInt(document.getElementById('editHareketSakin').value.match(/Daire (\d+)/)[1]) : null;
+    await supabaseClient.from('veriler').update({
+        islem_tarihi: document.getElementById('editHareketTarihi').value,
+        daire_no: dNo,
+        kategori: document.getElementById('editHareketKategori').value,
+        tutar: parseFloat(document.getElementById('editHareketTutar').value),
+        kasa_tipi: document.getElementById('editHareketKasa').value,
+        detay: document.getElementById('editHareketDetay').value,
+        sakin_bilgisi: document.getElementById('editHareketSakin').value
+    }).eq('id', id);
+    closeModal('hareketModal'); fetchData();
+}
+
+window.deleteHareket = async () => { if(confirm("Silinsin mi?")) { await supabaseClient.from('veriler').delete().eq('id', document.getElementById('editHareketId').value); closeModal('hareketModal'); fetchData(); } }
+
+// SAKİN MODAL
+window.openSakinModal = (id, ad, no) => {
+    document.getElementById('editSakinId').value = id;
+    document.getElementById('editSakinAd').value = ad;
+    document.getElementById('editSakinNo').value = no;
+    document.getElementById('sakinModal').style.display = 'flex';
+}
+
+window.saveSakin = async () => {
+    const id = document.getElementById('editSakinId').value, ad = document.getElementById('editSakinAd').value, no = document.getElementById('editSakinNo').value;
+    if(ad && no) { await supabaseClient.from('sakinler').update({ ad_soyad: ad, daire_no: no }).eq('id', id); closeModal('sakinModal'); await loadSakinlerData(); renderPaymentTable(); }
+}
+
+window.deleteSakinAction = async () => {
+    const id = document.getElementById('editSakinId').value;
+    if(confirm("Sakini sil?")) { await supabaseClient.from('sakinler').delete().eq('id', id); closeModal('sakinModal'); await loadSakinlerData(); renderPaymentTable(); }
+}
+
+window.closeModal = (m) => document.getElementById(m).style.display = 'none';
+
+window.showTab = (t) => {
+    ['kayitlar','sakinler','odeme-tablosu'].forEach(x => { document.getElementById(x+'Tab').style.display='none'; document.getElementById('tab-'+x).classList.remove('active'); });
+    document.getElementById(t+'Tab').style.display='block'; document.getElementById('tab-'+t).classList.add('active');
+    if(t==='odeme-tablosu') renderPaymentTable();
 }
 
 document.getElementById('loginBtn').onclick = async () => {
-    await supabaseClient.auth.signInWithPassword({ email: document.getElementById('email').value, password: document.getElementById('password').value });
-    checkSession();
+    const { error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('email').value, password: document.getElementById('password').value });
+    if(error) alert("Hata!"); else checkSession();
 }
-
 async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
 document.getElementById('topLogoutBtn').onclick = logout;
