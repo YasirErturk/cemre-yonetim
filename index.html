@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cemre Apartmanı | Yönetim Sistemi</title>
@@ -46,8 +47,11 @@
     </div>
 
     <div id="kayitlarTab">
+
         <section class="filter-section">
+	<h3>İşlem Filtreleme</h3>
             <div class="filter-grid">
+
                 <input type="text" id="searchFilter" placeholder="İşlem ara..." oninput="listeleVeriler()">
                 <select id="daireFilter" onchange="listeleVeriler()"><option value="all">Tüm Daireler</option></select>
                 <select id="yearFilter" onchange="listeleVeriler()">
@@ -55,38 +59,80 @@
                     <option value="2025">2025</option>
                     <option value="2026" selected>2026</option>
                 </select>
+
                 <select id="typeFilter" onchange="listeleVeriler()">
                     <option value="all">Gelir / Gider</option>
                     <option value="Aidat">Aidat Geliri</option>
                     <option value="Gider">Giderler</option>
                 </select>
+
                 <select id="walletFilter" onchange="listeleVeriler()">
                     <option value="all">Kasa Tipi</option>
                     <option value="Havale/EFT">Banka (EFT)</option>
                     <option value="Nakit">Nakit</option>
                 </select>
+
             </div>
         </section>
 
-        <section id="adminDiv" class="add-data-section" style="display:none;">
-            <h3>Yeni İşlem Kaydı</h3>
-            <div class="input-grid-large">
-                <input type="date" id="islemTarihi">
-                <select id="sakinSecici"></select>
-                <select id="kategori">
-                    <option value="Aidat">Aidat Geliri</option>
-                    <option value="Gider">Genel Gider</option>
-                    <option value="Fatura">Fatura Ödemesi</option>
-                </select>
-                <select id="kasaTipi">
-                    <option value="Havale/EFT">Havale / EFT</option>
-                    <option value="Nakit">Nakit</option>
-                </select>
-                <input type="number" id="tutar" placeholder="Tutar (TL)">
-                <input type="text" id="detay" placeholder="Açıklama Detayı">
-                <button id="ekleBtn" class="fancy-btn">KAYDET</button>
-            </div>
-        </section>
+<section id="adminDiv" class="add-data-section" style="display:none;">
+    <h3>Yeni İşlem Kaydı</h3>
+    <div class="input-grid-large">
+        <!-- 1. İşlem Tarihi -->
+        <div class="form-group">
+            <label>İşlem Tarihi</label>
+            <input type="date" id="islemTarihi" required onkeydown="return false" onclick="this.showPicker()">
+        </div>
+
+        <!-- 2. İşlem Türü -->
+<div class="form-group">
+    <label>İşlem Türü</label>
+    <select id="kategori">
+        <option value="" selected>İşlem Seçiniz...</option> 
+        <option value="Aidat">Aidat Geliri</option>
+        <option value="Ekstra Gelir">Ekstra Gelir</option>
+        <option value="Fatura">Fatura Ödemesi</option>
+        <option value="Gider">Genel Gider</option>
+    </select>
+</div>
+
+        <!-- 3. Ödeme Yapan / Yer (Dinamik dolacak) -->
+        <div class="form-group">
+            <label id="odemeYapanLabel">Ödeme Yapan</label>
+           	<select id="sakinSecici">
+			<option value="">Önce İşlem Türü Seçin...</option>
+		</select>
+        </div>
+
+        <!-- 4. Ödeme Tipi -->
+        <div class="form-group">
+            <label>Ödeme Tipi</label>
+            <select id="kasaTipi">
+                <option value="Havale/EFT">Havale / EFT</option>
+                <option value="Nakit">Nakit</option>
+            </select>
+        </div>
+
+        <!-- 5. Tutar -->
+        <div class="form-group">
+            <label>Tutar (TL)</label>
+            <input type="number" id="tutar" placeholder="0.00">
+        </div>
+
+        <!-- 6. Açıklama (Otomatik dolacak) -->
+        <div class="form-group">
+            <label>Açıklama</label>
+            <input type="text" id="detay" placeholder="Detay giriniz...">
+        </div>
+
+        <div class="form-group">
+            <label>&nbsp;</label>
+            <button id="ekleBtn" class="fancy-btn">KAYDET</button>
+        </div>
+    </div>
+</section>
+
+
         <ul id="veriListesi"></ul>
     </div>
 
@@ -105,7 +151,7 @@
         <section id="sakinEkleDiv" class="add-data-section" style="border-left-color: #f59e0b; display:none;">
             <h3>Sakin Tanımla</h3>
             <div class="input-grid-large">
-                <input type="number" id="inputDaireNo" placeholder="Daire No">
+                <select id="inputDaireNo"></select>
                 <input type="text" id="inputAdSoyad" placeholder="Ad Soyad">
                 <button id="sakinKaydetBtn" class="fancy-btn" style="background:#f59e0b">EKLE</button>
             </div>
@@ -121,7 +167,17 @@
             <div class="modal-grid">
                 <div><label class="modal-label">Tarih</label><input type="date" id="editHareketTarihi" class="modal-input"></div>
                 <div><label class="modal-label">Sakin</label><select id="editHareketSakin" class="modal-input"></select></div>
-                <div><label class="modal-label">Kategori</label><select id="editHareketKategori" class="modal-input"><option value="Aidat">Aidat</option><option value="Gider">Gider</option><option value="Fatura">Fatura</option></select></div>
+                <div><label class="modal-label">Kategori</label>
+                
+                <select id="editHareketKategori" class="modal-input">
+                    <option value="Aidat">Aidat</option>
+                    <option value="Ekstra Gelir">Ekstra Gelir</option> <!-- EKLE -->
+                    <option value="Gider">Gider</option>
+                    <option value="Fatura">Fatura</option>
+                </select>
+                </div>
+
+                
                 <div><label class="modal-label">Kasa</label><select id="editHareketKasa" class="modal-input"><option value="Havale/EFT">Banka</option><option value="Nakit">Nakit</option></select></div>
                 <div><label class="modal-label">Tutar</label><input type="number" id="editHareketTutar" class="modal-input"></div>
                 <div><label class="modal-label">Detay</label><input type="text" id="editHareketDetay" class="modal-input"></div>
@@ -138,12 +194,12 @@
         <div class="modal-content">
             <h3>Sakin Düzenle</h3>
             <input type="hidden" id="editSakinId">
-            <label class="modal-label">Daire No</label><input type="number" id="editSakinNo" class="modal-input">
+            <label class="modal-label">Daire No</label><select id="editSakinNo" class="modal-input"></select>
             <label class="modal-label">Ad Soyad</label><input type="text" id="editSakinAd" class="modal-input">
             <div style="display:flex; gap:10px; margin-top:15px;">
                 <button class="fancy-btn" style="background:#3b82f6; flex:1;" onclick="saveSakin()">Kaydet</button>
                 <button class="fancy-btn" style="background:#ef4444; flex:1;" onclick="deleteSakinAction()">Sil</button>
-                <button class="fancy-btn" style="background:#64748b; flex:1;" onclick="closeModal('sakinModal')">Kapat</button>
+                <button class="fancy-btn" style="background:#64748b; flex:1;" onclick="closeModal('sakinModal')">İptal</button>
             </div>
         </div>
     </div>
@@ -158,6 +214,7 @@
         </div>
     </div>
 </main>
+
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="script.js"></script>
