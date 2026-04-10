@@ -56,8 +56,7 @@
                 <select id="daireFilter" onchange="listeleVeriler()"><option value="all">Tüm Daireler</option></select>
                 <select id="yearFilter" onchange="listeleVeriler()">
                     <option value="all">Tüm Yıllar</option>
-                    <option value="2025">2025</option>
-                    <option value="2026" selected>2026</option>
+                    <!-- Diğer seçenekleri sildik, JS dolduracak -->
                 </select>
 
                 <select id="typeFilter" onchange="listeleVeriler()">
@@ -140,8 +139,7 @@
         <div class="table-header-box">
             <h3>Yıllık Aidat Takip Çizelgesi</h3>
             <select id="tableYearFilter" onchange="renderPaymentTable()">
-                <option value="2025">2025 Yılı</option>
-                <option value="2026" selected>2026 Yılı</option>
+                <!-- Seçenekleri sildik, JS dolduracak -->
             </select>
         </div>
         <div class="table-responsive"><table class="excel-table"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table></div>
@@ -196,6 +194,10 @@
             <input type="hidden" id="editSakinId">
             <label class="modal-label">Daire No</label><select id="editSakinNo" class="modal-input"></select>
             <label class="modal-label">Ad Soyad</label><input type="text" id="editSakinAd" class="modal-input">
+            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="editSakinIsAdmin" style="width: 20px; height: 20px; cursor: pointer;">
+                <label for="editSakinIsAdmin" style="cursor: pointer; font-weight: 600; color: #1e293b;">Bu Sakin Yönetici</label>
+            </div>
             <div style="display:flex; gap:10px; margin-top:15px;">
                 <button class="fancy-btn" style="background:#3b82f6; flex:1;" onclick="saveSakin()">Kaydet</button>
                 <button class="fancy-btn" style="background:#ef4444; flex:1;" onclick="deleteSakinAction()">Sil</button>

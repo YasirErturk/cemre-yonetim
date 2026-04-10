@@ -17,6 +17,7 @@ async function checkSession() {
     document.getElementById('sakinEkleDiv').style.display = isOk ? 'block' : 'none';
 
 daireSecicileriDoldur();
+yilFiltreleriniDoldur();
 
     if(isOk) { currentUserEmail = session.user.email; startTimer(); setToday(); }
     await loadSakinlerData(); await fetchData();
@@ -120,24 +121,29 @@ function renderUI(data) {
         const dStr = getTarih(item);
 
         // --- YENİ: DÜZENLEME ROZETİ KONTROLÜ ---
-const duzenlemeRozeti = item.duzenleyen 
-    ? `<span class="edit-badge" 
-             onclick="event.stopPropagation(); alert('Düzenleyen: ${item.duzenleyen}\\nTarih: ${new Date(item.duzenleme_tarihi).toLocaleString('tr-TR')}\\n${item.eski_deger}')"
-             title="Düzenleyen: ${item.duzenleyen} | Tarih: ${new Date(item.duzenleme_tarihi).toLocaleString('tr-TR')} | ${item.eski_deger}">
-             ⚠ Düzenlendi
-       </span>` 
-    : '';
-
-        liste.innerHTML += `
-            <li style="border-left: 6px solid ${borderCol}; cursor: ${isAdmin?'pointer':'default'}" ${isAdmin?`ondblclick="openHareketModal(${item.id})"`:''}>
-                <div style="flex:1;">
-                    <span class="date-badge islem-date">${dStr ? dStr.split('-').reverse().join('.') : ''}</span>
-                    ${duzenlemeRozeti}
-                    <br><strong style="color:${isGelir?'#10b981':'#ef4444'}">${valSakin} | ${item.kategori}</strong><br>
-                    <small><b>[${valKasa==='Havale/EFT'?'Banka':valKasa}]</b> - ${valDetay}</small>
-                </div>
-                <div style="font-weight:800; font-size:16px;">${valTutar.toLocaleString('tr-TR')} TL</div>
-            </li>`;
+        const duzenlemeRozeti = item.duzenleyen 
+        ? `<span class="edit-badge" 
+                 onclick="event.stopPropagation(); alert('Düzenleyen: ${item.duzenleyen}\\nTarih: ${new Date(item.duzenleme_tarihi).toLocaleString('tr-TR')}\\n${item.eski_deger}')"
+                 title="Düzenleyen: ${item.duzenleyen} | Tarih: ${new Date(item.duzenleme_tarihi).toLocaleString('tr-TR')} | ${item.eski_deger}">
+                 ⚠ Düzenlendi
+           </span>` 
+        : '';
+    
+    // Yönetici ve Aidat kontrolü ile tutar gösterimi
+    const bakiyeGosterim = (item.kategori === 'Aidat' && valTutar === 0) 
+        ? `<span style="color:#6366f1; font-weight:800;">YÖNETİCİ</span>` 
+        : `${valTutar.toLocaleString('tr-TR')} TL`;
+    
+    liste.innerHTML += `
+        <li style="border-left: 6px solid ${borderCol}; cursor: ${isAdmin?'pointer':'default'}" ${isAdmin?`ondblclick="openHareketModal(${item.id})"`:''}>
+            <div style="flex:1;">
+                <span class="date-badge islem-date">${dStr ? dStr.split('-').reverse().join('.') : ''}</span>
+                ${duzenlemeRozeti}
+                <br><strong style="color:${isGelir?'#10b981':'#ef4444'}">${valSakin} | ${item.kategori}</strong><br>
+                <small><b>[${valKasa==='Havale/EFT'?'Banka':valKasa}]</b> - ${valDetay}</small>
+            </div>
+            <div style="font-weight:800; font-size:16px;">${bakiyeGosterim}</div>
+        </li>`;
     });
     
     document.getElementById('totalBanka').innerText = b.toLocaleString('tr-TR') + " TL";
@@ -188,7 +194,10 @@ document.getElementById('ekleBtn').onclick = async () => {
         return;
     }
 
-    if (!v.t || v.t <= 0) {
+    const seciliSakin = sakinlerData.find(s => `Daire ${s.daire_no} - ${s.ad_soyad}` === v.sak);
+    const isYoneticiMuafiyeti = (v.kat === "Aidat" && seciliSakin && seciliSakin.is_admin);
+
+    if (!v.t || v.t < 0 || (v.t == 0 && !isYoneticiMuafiyeti)) {
         alert("Lütfen geçerli bir tutar giriniz!");
         return;
     }
@@ -250,8 +259,6 @@ async function loadSakinlerData() {
     const { data } = await supabaseClient.from('sakinler').select('*').order('daire_no');
     sakinlerData = data || [];
     
-    // ARTIK 'sel' (sakinSecici) KISMINI BURADAN SİLDİK. 
-    // BURASI SADECE FİLTRE VE LİSTEYİ GÜNCELLEYECEK.
     const fil = document.getElementById('daireFilter');
     const list = document.getElementById('sakinListesi');
     
@@ -264,8 +271,22 @@ async function loadSakinlerData() {
         const t = `Daire ${s.daire_no} - ${s.ad_soyad}`;
         if(fil) fil.innerHTML += `<option value="Daire ${s.daire_no}">${t}</option>`;
         
+        // --- VURGU KISMI BURADA BAŞLIYOR ---
+        const isYonetici = s.is_admin === true;
+        const yoneticiStili = isYonetici ? 'border-left: 5px solid #6366f1; background: #f8fafc;' : '';
+        const yoneticiRozeti = isYonetici ? '<span style="background:#eef2ff; color:#6366f1; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:10px; border:1px solid #e0e7ff; font-weight:700;">YÖNETİCİ</span>' : '';
+        
         const dblClickAction = isAdmin ? `ondblclick="openSakinModal(${s.id}, '${s.ad_soyad}', ${s.daire_no})"` : '';
-        if(list) list.innerHTML += `<li style="cursor: ${isAdmin?'pointer':'default'};" ${dblClickAction}><span>${t}</span></li>`;
+        
+        if(list) {
+            list.innerHTML += `
+                <li style="cursor: ${isAdmin?'pointer':'default'}; ${yoneticiStili}" ${dblClickAction}>
+                    <span style="display:flex; align-items:center; width:100%;">
+                        ${t} ${yoneticiRozeti}
+                    </span>
+                </li>`;
+        }
+        // --- VURGU KISMI BURADA BİTİYOR ---
     });
 }
 
@@ -287,7 +308,23 @@ function renderPaymentTable() {
             if (o) {
                 const dStr = getTarih(o);
                 const formatTarih = dStr ? dStr.split('-').reverse().join('.') : '';
-                r += `<td class="paid-cell"><strong>${o.tutar || o.aciklama} TL</strong><br><small>${formatTarih}</small></td>`;
+                
+                // Yönetici olup olmadığını kontrol et (Kategori Aidat ve Tutar 0 ise)
+                const isYoneticiMuaf = (o.kategori === 'Aidat' && o.tutar == 0);
+                
+                // Renk ve İçerik Belirleme
+                // Yönetici için: Yumuşak bir gri-mavi arka plan ve koyu mavi yazı
+                // Normal sakin için: Standart yeşil (paid-cell sınıfından gelir)
+                const hucreIcerik = isYoneticiMuaf ? "YÖNETİCİ" : `${o.tutar} TL`;
+                
+                const yoneticiStili = isYoneticiMuaf 
+                ? 'style="background-color: #eef2ff !important; color: #6366f1 !important; border: 1px solid #c3dafe; font-weight: bold;"' 
+                : '';
+            
+                r += `<td class="${isYoneticiMuaf ? '' : 'paid-cell'}" ${yoneticiStili}>
+                        <strong style="font-size: 11px;">${hucreIcerik}</strong><br>
+                        <small style="font-size: 9px; opacity: 0.8;">${formatTarih}</small>
+                      </td>`;
             } else {
                 r += `<td></td>`;
             }
@@ -381,19 +418,58 @@ window.deleteHareket = async () => { if(confirm("Silinsin mi?")) { await supabas
 
 // SAKİN MODAL
 window.openSakinModal = (id, ad, no) => {
+    const s = sakinlerData.find(x => x.id === id); // Sakin verisini bul
     document.getElementById('editSakinId').value = id;
     document.getElementById('editSakinAd').value = ad;
     let formatliNo = no < 10 ? '0' + no : no.toString();
     document.getElementById('editSakinNo').value = formatliNo; 
+    
+    // Tik kutusunu veritabanındaki duruma göre ayarla
+    document.getElementById('editSakinIsAdmin').checked = s.is_admin || false;
+    
     document.getElementById('sakinModal').style.display = 'flex';
 }
 
 window.saveSakin = async () => {
-    const id = document.getElementById('editSakinId').value, ad = document.getElementById('editSakinAd').value, no = document.getElementById('editSakinNo').value;
-    if(ad && no) { await supabaseClient.from('sakinler').update({ ad_soyad: ad, daire_no: no }).eq('id', id); closeModal('sakinModal');
-await loadSakinlerData();
-renderPaymentTable();
-	}
+    const id = document.getElementById('editSakinId').value;
+    const ad = document.getElementById('editSakinAd').value;
+    const no = document.getElementById('editSakinNo').value;
+    const isAdmin = document.getElementById('editSakinIsAdmin').checked;
+
+    if(ad && no) { 
+        // EĞER BU KİŞİ YÖNETİCİ OLARAK KAYDEDİLECEKSE
+        if (isAdmin === true) {
+            // Önce veritabanındaki TÜM is_admin'leri false yap (Filtre koymadan herkesi tara)
+            await supabaseClient
+                .from('sakinler')
+                .update({ is_admin: false })
+                .is('is_admin', true); // Sadece halihazırda true olanları bul ve kapat
+        }
+
+        // Şimdi asıl kişiyi güncelle
+        const { error } = await supabaseClient
+            .from('sakinler')
+            .update({ 
+                ad_soyad: ad, 
+                daire_no: no, 
+                is_admin: isAdmin 
+            })
+            .eq('id', id); 
+
+        if (error) {
+            alert("Hata: " + error.message);
+        } else {
+            // ÖNEMLİ: Veriyi tekrar çekmeden önce yerel değişkeni de temizleyebiliriz 
+            // ama loadSakinlerData zaten bunu yapmalı.
+            closeModal('sakinModal');
+            
+            // Veritabanı işleminin tamamlanması için çok kısa bir bekleme (opsiyonel)
+            setTimeout(async () => {
+                await loadSakinlerData();
+                renderPaymentTable();
+            }, 200);
+        }
+    }
 }
 
 window.deleteSakinAction = async () => {
@@ -545,3 +621,59 @@ function modalSakinleriGuncelle(selectedValue = null) {
 
 document.getElementById('editHareketKategori')
 .addEventListener('change', () => modalSakinleriGuncelle());
+
+
+
+
+function yilFiltreleriniDoldur() {
+    const yearFilter = document.getElementById('yearFilter');
+    const tableYearFilter = document.getElementById('tableYearFilter');
+    
+    const baslangicYili = 2024;
+    const guncelYil = new Date().getFullYear(); // Şu an 2026 dönecektir
+
+    // Filtreleri temizle (HTML'de kalanları garantiye alalım)
+    if (yearFilter) yearFilter.innerHTML = '<option value="all">Tüm Yıllar</option>';
+    if (tableYearFilter) tableYearFilter.innerHTML = '';
+
+    for (let yil = baslangicYili; yil <= guncelYil; yil++) {
+        // 1. Hareketler Filtresi için
+        if (yearFilter) {
+            const opt = new Option(yil, yil);
+            if (yil === guncelYil) opt.selected = true; // 2026'yı varsayılan seç
+            yearFilter.add(opt);
+        }
+
+        // 2. Ödeme Tablosu Filtresi için
+        if (tableYearFilter) {
+            const optTable = new Option(yil + " Yılı", yil);
+            if (yil === guncelYil) optTable.selected = true; // 2026'yı varsayılan seç
+            tableYearFilter.add(optTable);
+        }
+    }
+}
+
+function yoneticiKontrolEt() {
+    const seciliMetin = document.getElementById('sakinSecici').value;
+    const kat = document.getElementById('kategori').value;
+    const tutarInput = document.getElementById('tutar');
+    const detayInput = document.getElementById('detay');
+
+    const seciliSakin = sakinlerData.find(s => `Daire ${s.daire_no} - ${s.ad_soyad}` === seciliMetin);
+
+    if (seciliSakin && seciliSakin.is_admin && kat === "Aidat") {
+        tutarInput.value = 0;
+        tutarInput.readOnly = true;
+        tutarInput.style.backgroundColor = "#f1f5f9"; 
+        detayInput.value = "Yönetici Muafiyeti";
+    } else {
+        tutarInput.readOnly = false;
+        tutarInput.style.backgroundColor = "#ffffff";
+        // Eğer muafiyetten çıkıyorsa ve içi "Yönetici Muafiyeti" ise temizle
+        if(detayInput.value === "Yönetici Muafiyeti") detayInput.value = "";
+    }
+}
+
+// Dinleyicileri de hemen altına ekle:
+document.getElementById('sakinSecici').addEventListener('change', yoneticiKontrolEt);
+document.getElementById('kategori').addEventListener('change', yoneticiKontrolEt);
