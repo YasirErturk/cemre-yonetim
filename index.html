@@ -53,8 +53,13 @@
     <div id="kayitlarTab">
 
         <section class="filter-section">
-	<h3>İşlem Filtreleme</h3>
-            <div class="filter-grid">
+	        <h3 class="section-header" onclick="toggleSection('filterContent', this)">
+                İşlem Filtreleme
+                <span class="arrow"></span>
+            </h3>
+
+            <div id="filterContent" class="section-content">
+                <div class="filter-grid">
 
                 <input type="text" id="searchFilter" placeholder="İşlem ara..." oninput="listeleVeriler()">
                 <select id="daireFilter" onchange="listeleVeriler()"><option value="all">Tüm Daireler</option></select>
@@ -76,16 +81,22 @@
                 </select>
 
             </div>
-        </section>
+        </div>
+    </section>
 
 <section id="adminDiv" class="add-data-section" style="display:none;">
-    <h3>Yeni İşlem Kaydı</h3>
-    <div class="input-grid-large">
+    <h3 class="section-header" onclick="toggleSection('formContent', this)">
+        Yeni İşlem Kaydı
+        <span class="arrow"></span>
+    </h3>
+    <div id="formContent" class="section-content">
+        <div class="input-grid-large">
         <!-- 1. İşlem Tarihi -->
         <div class="form-group">
             <label>İşlem Tarihi</label>
             <input type="date" id="islemTarihi" required onkeydown="return false" onclick="this.showPicker()">
         </div>
+    </div>
 
         <!-- 2. İşlem Türü -->
 <div class="form-group">

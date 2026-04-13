@@ -123,6 +123,11 @@ li:hover {
     color: #1e293b;
 }
 
+.add-data-section h3 {
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+
 .filter-section h3 {
     border-bottom: 2px solid #f1f5f9;
     padding-bottom: 8px;
@@ -246,4 +251,37 @@ li:hover {
         padding: 10px 15px !important;
         font-size: 13px !important;
     }
+}
+
+/* COLLAPSIBLE (AÇILIR-KAPANIR) ALAN */
+.section-content {
+    height: 0;
+    overflow: hidden;
+    transition: height 0.4s cubic-bezier(.4,0,.2,1);
+}
+
+
+
+/* BAŞLIK STİLİ */
+.section-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* OK (ARROW) */
+.arrow {
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid #1e293b;
+    border-bottom: 2px solid #1e293b;
+    transform: rotate(45deg);
+    transition: transform 0.3s ease;
+    margin-left: 10px;
+}
+
+/* AÇIKKEN OK DÖNER */
+.section-header.active .arrow {
+    transform: rotate(225deg);
 }

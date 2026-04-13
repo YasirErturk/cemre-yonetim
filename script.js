@@ -677,3 +677,51 @@ function yoneticiKontrolEt() {
 // Dinleyicileri de hemen altına ekle:
 document.getElementById('sakinSecici').addEventListener('change', yoneticiKontrolEt);
 document.getElementById('kategori').addEventListener('change', yoneticiKontrolEt);
+
+// Verileri ekrana bastığın fonksiyonun içinde olmalı:
+function renderItems(items) {
+    const listContainer = document.getElementById('islemListesi');
+    listContainer.innerHTML = '';
+
+    items.forEach(item => {
+        const li = document.createElement('li'); // 'li' burada tanımlanıyor
+        li.innerHTML = `... içerik ...`;
+
+        // DÜZELTME: Dinleyici tam burada, 'li' varken eklenmeli
+        li.addEventListener('dblclick', () => {
+            openEditModal(item);
+        });
+
+        listContainer.appendChild(li);
+    });
+}
+
+
+function toggleSection(id, headerEl) {
+    const current = document.getElementById(id);
+
+    // 🔴 diğerlerini kapat
+    document.querySelectorAll('.section-content').forEach(el => {
+        if (el !== current) {
+            el.style.height = "0px";
+            el.classList.remove('active');
+        }
+    });
+
+    document.querySelectorAll('.section-header').forEach(h => {
+        if (h !== headerEl) {
+            h.classList.remove('active');
+        }
+    });
+
+    // 🟢 toggle
+    if (current.classList.contains('active')) {
+        current.style.height = "0px";
+        current.classList.remove('active');
+        headerEl.classList.remove('active');
+    } else {
+        current.style.height = current.scrollHeight + "px";
+        current.classList.add('active');
+        headerEl.classList.add('active');
+    }
+}
