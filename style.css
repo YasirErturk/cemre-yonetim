@@ -174,3 +174,58 @@ li:hover {
 .kaydet-butonu:hover {
     background-color: #218838;
 }
+
+
+/* Mobil Düzenlemeler (Ekran 768px'den küçükse) */
+@media (max-width: 768px) {
+    .header-container {
+        flex-direction: column; /* Öğeleri alt alta diz */
+        gap: 15px;
+        padding: 15px 10px;
+    }
+
+    .header-auth, .header-admin-tools {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap; /* Sığmazsa alt satıra geç */
+    }
+
+    #loginDiv input {
+        width: 45%; /* Giriş kutularını yan yana küçült */
+        font-size: 14px;
+    }
+
+    .timer-box {
+        font-size: 12px;
+        padding: 5px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* İstatistik kartlarını tam genişlik yap */
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Filtre kutularını 2'li yan yana yap */
+    .filter-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px;
+    }
+
+    /* Arama kutusu en üstte tek başına kalsın */
+    #searchFilter {
+        grid-column: span 2;
+    }
+
+    /* Kayıt formundaki kutuları alt alta diz */
+    .input-grid-large {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Tab butonlarını daha küçük ve yan yana sığacak yap */
+    .tab-btn {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+}
