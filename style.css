@@ -175,114 +175,75 @@ li:hover {
     background-color: #218838;
 }
 
+/* --- MOBİL UYUMLULUK AYARLARI --- */
 
-/* Mobil Düzenlemeler (Ekran 768px'den küçükse) */
 @media (max-width: 768px) {
+    /* Header ve Logo */
     .header-container {
-        flex-direction: column; /* Öğeleri alt alta diz */
-        gap: 15px;
-        padding: 15px 10px;
+        flex-direction: column !important;
+        gap: 12px !important;
+        padding: 15px 10px !important;
     }
-
-    .header-auth, .header-admin-tools {
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap; /* Sığmazsa alt satıra geç */
-    }
-
-    #loginDiv input {
-        width: 45%; /* Giriş kutularını yan yana küçült */
-        font-size: 14px;
-    }
-
-    .timer-box {
-        font-size: 12px;
-        padding: 5px 10px;
-    }
-}
-
-@media (max-width: 480px) {
-    /* İstatistik kartlarını tam genişlik yap */
+    .logo { font-size: 20px !important; }
+    .header-auth { width: 100%; justify-content: center; }
+    
+    /* Üst Kartlar (Kasa Durumu) */
     .stats-grid {
         grid-template-columns: 1fr !important;
     }
-
-    /* Filtre kutularını 2'li yan yana yap */
-    .filter-grid {
-        grid-template-columns: 1fr 1fr !important;
-        gap: 8px;
-    }
-
-    /* Arama kutusu en üstte tek başına kalsın */
-    #searchFilter {
-        grid-column: span 2;
-    }
-
-    /* Kayıt formundaki kutuları alt alta diz */
-    .input-grid-large {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* Tab butonlarını daha küçük ve yan yana sığacak yap */
-    .tab-btn {
-        padding: 8px 10px;
-        font-size: 13px;
-    }
 }
 
 @media (max-width: 600px) {
-    .header-container {
-        flex-direction: column !important;
-        text-align: center;
-        padding-bottom: 20px;
-    }
-
-    .header-admin-tools {
-        justify-content: center !important;
-        margin-top: 10px;
-    }
-
-    /* "CemreApartmanı" yazısını biraz küçült ki ekrana sığsın */
-    .logo {
-        font-size: 22px !important;
-    }
-}
-
-
-@media (max-width: 600px) {
-    /* 1. İşlem Filtreleme: Alt alta tam genişlik yapıyoruz */
+    /* Filtreleme Bölümü */
     .filter-grid {
         display: flex !important;
-        flex-direction: column !important; /* Yan yana yerine ALT ALTA */
-        gap: 12px !important;
+        flex-direction: column !important;
+        gap: 10px !important;
     }
-
-    /* Filtre içindeki input ve select'leri kutuya sığdır */
-    .filter-grid select, 
-    .filter-grid input {
+    .filter-grid input[type="text"], 
+    .filter-grid select {
         width: 100% !important;
-        margin: 0 !important;
+        grid-column: span 1 !important; /* Grid ayarını ezmek için */
     }
 
-    /* 2. İşlem Düzenleme (Modal) Tarih Alanı Tamiri */
-    /* Tarih kutusunun alttakilerle aynı genişlikte olmasını sağlar */
-    #editTarih, 
-    .modal-input, 
-    .modal-select {
+    /* Yeni İşlem Kaydı Formu */
+    .input-grid-large {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .form-group { width: 100% !important; }
+    .form-group input, .form-group select { width: 100% !important; }
+    .fancy-btn, .kaydet-butonu { width: 100% !important; margin-top: 10px; }
+
+    /* Modal (İşlem Düzenleme) */
+    .modal-content {
+        width: 95% !important;
+        padding: 20px !important;
+    }
+    .modal-grid {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .modal-input, .modal-select {
         width: 100% !important;
-        box-sizing: border-box !important; /* Padding'in genişliği bozmasını engeller */
-        display: block;
-    }
-
-    /* Modal içindeki butonları yan yana ama sığacak şekilde ayarla */
-    .modal-buttons {
-        display: grid;
-        grid-template-columns: 1fr 1fr; /* Kaydet ve Sil yan yana */
-        gap: 10px;
+        box-sizing: border-box !important;
     }
     
-    /* İptal butonunu en alta tam genişlik yay */
+    /* Modal Butonları */
+    .modal-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 15px;
+    }
     .modal-buttons button:last-child {
         grid-column: span 2;
+        margin-top: 5px;
+    }
+
+    /* Tab Butonları */
+    .tab-btn {
+        padding: 10px 15px !important;
+        font-size: 13px !important;
     }
 }
