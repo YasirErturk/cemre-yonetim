@@ -229,3 +229,60 @@ li:hover {
         font-size: 13px;
     }
 }
+
+@media (max-width: 600px) {
+    .header-container {
+        flex-direction: column !important;
+        text-align: center;
+        padding-bottom: 20px;
+    }
+
+    .header-admin-tools {
+        justify-content: center !important;
+        margin-top: 10px;
+    }
+
+    /* "CemreApartmanı" yazısını biraz küçült ki ekrana sığsın */
+    .logo {
+        font-size: 22px !important;
+    }
+}
+
+
+@media (max-width: 600px) {
+    /* 1. İşlem Filtreleme: Alt alta tam genişlik yapıyoruz */
+    .filter-grid {
+        display: flex !important;
+        flex-direction: column !important; /* Yan yana yerine ALT ALTA */
+        gap: 12px !important;
+    }
+
+    /* Filtre içindeki input ve select'leri kutuya sığdır */
+    .filter-grid select, 
+    .filter-grid input {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    /* 2. İşlem Düzenleme (Modal) Tarih Alanı Tamiri */
+    /* Tarih kutusunun alttakilerle aynı genişlikte olmasını sağlar */
+    #editTarih, 
+    .modal-input, 
+    .modal-select {
+        width: 100% !important;
+        box-sizing: border-box !important; /* Padding'in genişliği bozmasını engeller */
+        display: block;
+    }
+
+    /* Modal içindeki butonları yan yana ama sığacak şekilde ayarla */
+    .modal-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Kaydet ve Sil yan yana */
+        gap: 10px;
+    }
+    
+    /* İptal butonunu en alta tam genişlik yay */
+    .modal-buttons button:last-child {
+        grid-column: span 2;
+    }
+}
