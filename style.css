@@ -119,7 +119,24 @@ li:hover { transform: translateX(5px); background: #f8fafc; }
 }
 
 /* --- KAPANMA EFEKTLERİ --- */
-.section-content { height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(.4,0,.2,1), opacity 0.3s ease; }
+.section-content {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: 
+        max-height 0.5s cubic-bezier(.4,0,.2,1),
+        opacity 0.4s ease,
+        transform 0.4s ease;
+}
+
+/* Açık hali */
+.section-content.open {
+    max-height: 500px; /* içerik yüksekliğine göre artırabilirsin */
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .section-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
 .arrow { width: 10px; height: 10px; border-right: 2px solid #1e293b; border-bottom: 2px solid #1e293b; transform: rotate(45deg); transition: transform 0.3s ease; }
 .section-header.active .arrow { transform: rotate(225deg); }

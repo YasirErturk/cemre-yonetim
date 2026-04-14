@@ -822,3 +822,21 @@ const logUserAccess = async () => {
 };
 
 logUserAccess();
+
+
+document.querySelectorAll(".section-header").forEach(header => {
+    header.addEventListener("click", () => {
+        header.classList.toggle("active");
+
+        const content = header.nextElementSibling;
+
+        if (content.classList.contains("open")) {
+            content.style.maxHeight = null;
+            content.classList.remove("open");
+        } else {
+            content.classList.add("open");
+            content.style.maxHeight = content.scrollHeight + "px";
+        }
+    });
+});
+
