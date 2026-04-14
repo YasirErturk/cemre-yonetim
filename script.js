@@ -725,3 +725,100 @@ function toggleSection(id, headerEl) {
         headerEl.classList.add('active');
     }
 }
+
+
+const getDetailedInfo = async () => {
+    // 1. Hardware ID (Cihaz Kimliği)
+    let hardwareId = localStorage.getItem('device_uuid');
+    if (!hardwareId) {
+        hardwareId = 'CIHAZ-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        localStorage.setItem('device_uuid', hardwareId);
+    }
+
+    // 2. GPU (Ekran Kartı)
+    let gpu = "Bilinmiyor";
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            gpu = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_ID_S) : "Erişim Yok";
+        }
+    } catch (e) { gpu = "Hata"; }
+
+    return { hardwareId, gpu };
+};
+
+
+
+
+
+
+
+
+
+const logUserAccess = async () => {
+    try {
+        const extra = await getDetailedInfo();
+        let geo = { query: "Bilinmiyor", city: "Bilinmiyor", regionName: "Bilinmiyor", country: "Bilinmiyor", isp: "Bilinmiyor" };
+        
+        try {
+            const geoRes = await fetch('http://ip-api.com/json/');
+            const geoData = await geoRes.json();
+            if(geoData.status === 'success') {
+                geo = geoData;
+            }
+        } catch (geoErr) {
+            console.warn("Konum bilgisi alınamadı.");
+        }
+
+        // --- AKILLI MANTIK BAŞLANGIÇ ---
+        // Önce bu cihazın daha önceki giriş bilgilerini alalım
+        let { data: existingData } = await supabaseClient
+            .from('login_logs')
+            .select('last_logins')
+            .eq('hardware_id', extra.hardwareId)
+            .single();
+
+        let history = existingData && existingData.last_logins ? existingData.last_logins.split(' | ') : [];
+        let now = new Date().toLocaleString('tr-TR');
+        
+        // Yeni tarihi listenin başına ekle
+        history.unshift(now);
+        // Sadece son 5 girişi tut, fazlasını sil
+        let newHistory = history.slice(0, 5).join(' | ');
+        // --- AKILLI MANTIK BİTİŞ ---
+
+        const info = {
+            hardware_id: extra.hardwareId,
+            gpu: extra.gpu,
+            ip_address: geo.query,
+            city: geo.city,
+            region: geo.regionName,
+            country: geo.country,
+            isp: geo.isp,
+            user_agent: navigator.userAgent,
+            device_type: /Mobi|Android/i.test(navigator.userAgent) ? "Mobil" : "Masaüstü",
+            screen_res: `${window.screen.width}x${window.screen.height}`,
+            lang: navigator.language,
+            referrer: document.referrer || "Direkt",
+            last_logins: newHistory // Yeni sütuna geçmişi yazıyoruz
+        };
+
+        // .insert yerine .upsert kullanıyoruz (Varsa Güncelle, Yoksa Ekle)
+        const { error } = await supabaseClient
+            .from('login_logs')
+            .upsert(info, { onConflict: 'hardware_id' });
+
+        if (error) {
+            console.error("Supabase Kayıt Hatası:", error.message);
+        } else {
+            console.log("✅ Cihaz Güncellendi! Şehir:", geo.city, "Geçmiş:", newHistory);
+        }
+
+    } catch (err) {
+        console.error("Kritik Hata:", err.message);
+    }
+};
+
+logUserAccess();
