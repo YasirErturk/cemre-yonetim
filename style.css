@@ -140,3 +140,6 @@ li:hover { transform: translateX(5px); background: #f8fafc; }
 .section-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
 .arrow { width: 10px; height: 10px; border-right: 2px solid #1e293b; border-bottom: 2px solid #1e293b; transform: rotate(45deg); transition: transform 0.3s ease; }
 .section-header.active .arrow { transform: rotate(225deg); }
+
+
+

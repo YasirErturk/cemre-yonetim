@@ -152,26 +152,59 @@ function renderUI(data) {
 }
 
 
-window.openBakiyeModal = (tip) => {
+window.openBakiyeModal = async (tip) => {
     const liste = document.getElementById('bakiyeListe');
-    liste.innerHTML = '';
-    document.getElementById('bakiyeModalTitle').innerText = tip === 'Genel' ? 'Genel Kasa İşlemleri' : (tip === 'Havale/EFT' ? 'Banka Hesabı İşlemleri' : 'Nakit İşlemleri');
+    const modal = document.getElementById('bakiyeModal');
 
-    rawData.filter(item => {
-        const itemKasa = item.kasa_tipi || (item.aciklama && item.aciklama.includes('Nakit') ? 'Nakit' : 'Havale/EFT');
+    // 1. MODAL HEMEN AÇ
+    modal.style.display = 'flex';
+
+    // 2. LOADING GÖSTER
+    liste.innerHTML = `
+        <li style="text-align:center; padding:20px; color:#64748b;">
+            ⏳ Lütfen bekleyin, veriler yükleniyor...
+        </li>
+    `;
+
+    document.getElementById('bakiyeModalTitle').innerText =
+        tip === 'Genel'
+            ? 'Genel Kasa İşlemleri'
+            : tip === 'Havale/EFT'
+                ? 'Banka Hesabı İşlemleri'
+                : 'Nakit İşlemleri';
+
+    // 3. VERİYİ ARKADA ÇEK
+    const data = rawData.filter(item => {
+        const itemKasa = item.kasa_tipi ||
+            (item.aciklama && item.aciklama.includes('Nakit') ? 'Nakit' : 'Havale/EFT');
         return tip === 'Genel' || itemKasa === tip;
-    }).forEach(item => {
-        const valTutar = item.tutar !== null ? parseFloat(item.tutar) : (parseFloat(item.aciklama) || 0);
-        const isGelir = item.kategori === 'Aidat';
-        const color = isGelir ? '#10b981' : '#ef4444';
-        const dStr = getTarih(item);
-        liste.innerHTML += `<li style="border-left:5px solid ${color}; background:#f8fafc; margin-bottom:5px; padding:10px; display:flex; justify-content:space-between; align-items:center;">
-            <div style="flex:1;"><small>${dStr ? dStr.split('-').reverse().join('.') : ''}</small><br><strong>${item.sakin_bilgisi || 'Genel'}</strong></div>
-            <div style="font-weight:800; color:${color}">${isGelir?'+':'-'}${valTutar.toLocaleString('tr-TR')} TL</div>
-        </li>`;
     });
-    document.getElementById('bakiyeModal').style.display = 'flex';
-}
+
+    // 4. KISA BİR FRAME SONRA BAS (UI donmasın)
+    setTimeout(() => {
+        liste.innerHTML = '';
+
+        data.forEach(item => {
+            const valTutar = item.tutar !== null ? parseFloat(item.tutar) : (parseFloat(item.aciklama) || 0);
+            const isGelir = item.kategori === 'Aidat';
+            const color = isGelir ? '#10b981' : '#ef4444';
+            const dStr = getTarih(item);
+
+            liste.innerHTML += `
+                <li style="border-left:5px solid ${color}; background:#f8fafc; margin-bottom:5px; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <small>${dStr ? dStr.split('-').reverse().join('.') : ''}</small><br>
+                        <strong>${item.sakin_bilgisi || 'Genel'}</strong>
+                    </div>
+                    <div style="font-weight:800; color:${color}">
+                        ${isGelir ? '+' : '-'}${valTutar.toLocaleString('tr-TR')} TL
+                    </div>
+                </li>
+            `;
+        });
+
+    }, 50);
+};
 
 document.getElementById('ekleBtn').onclick = async () => {
     const v = {
@@ -700,11 +733,10 @@ function renderItems(items) {
 function toggleSection(id, headerEl) {
     const current = document.getElementById(id);
 
-    // 🔴 diğerlerini kapat
+    // diğerlerini kapat
     document.querySelectorAll('.section-content').forEach(el => {
         if (el !== current) {
-            el.style.height = "0px";
-            el.classList.remove('active');
+            el.classList.remove('open');
         }
     });
 
@@ -714,14 +746,12 @@ function toggleSection(id, headerEl) {
         }
     });
 
-    // 🟢 toggle
-    if (current.classList.contains('active')) {
-        current.style.height = "0px";
-        current.classList.remove('active');
+    // toggle
+    if (current.classList.contains('open')) {
+        current.classList.remove('open');
         headerEl.classList.remove('active');
     } else {
-        current.style.height = current.scrollHeight + "px";
-        current.classList.add('active');
+        current.classList.add('open');
         headerEl.classList.add('active');
     }
 }
@@ -823,20 +853,4 @@ const logUserAccess = async () => {
 
 logUserAccess();
 
-
-document.querySelectorAll(".section-header").forEach(header => {
-    header.addEventListener("click", () => {
-        header.classList.toggle("active");
-
-        const content = header.nextElementSibling;
-
-        if (content.classList.contains("open")) {
-            content.style.maxHeight = null;
-            content.classList.remove("open");
-        } else {
-            content.classList.add("open");
-            content.style.maxHeight = content.scrollHeight + "px";
-        }
-    });
-});
 
