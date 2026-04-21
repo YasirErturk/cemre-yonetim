@@ -31,11 +31,18 @@ body {
 
 /* --- TABLE --- */
 .table-header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #fff; padding: 15px; border-radius: 12px; border-left: 5px solid #3b82f6; }
-.table-responsive { background: #fff; border-radius: 15px; overflow-x: auto; padding: 15px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.table-responsive { background: #fff; border-radius: 15px; overflow-x: auto; padding: 15px 0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
 .excel-table { width: 100%; border-collapse: collapse; min-width: 900px; font-size: 13px; }
 .excel-table th, .excel-table td { border: 1px solid #e2e8f0; padding: 12px 8px; text-align: center; }
 .excel-table th { background: #f8fafc; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-.excel-table td:first-child { text-align: left; font-weight: 700; background: #f8fafc; position: sticky; left: 0; z-index: 10; border-right: 2px solid #3b82f6; }
+
+.excel-table th:first-child,
+.excel-table td:first-child {position: sticky;left: 0; background: #f8fafc; z-index: 30; border-right: 2px solid #3b82f6;}
+
+/* Başlık hücresine (DAİRE yazan yer) ekstra bir katman veriyoruz */
+.excel-table th:first-child {
+    z-index: 31; 
+}
 .paid-cell { background: #dcfce7 !important; color: #15803d; font-weight: 700; }
 
 /* --- FORMS (Filtre ve Yeni İşlem Ortak) --- */
