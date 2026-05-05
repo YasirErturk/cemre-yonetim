@@ -139,7 +139,7 @@ li:hover { transform: translateX(5px); background: #f8fafc; }
 
 /* Açık hali */
 .section-content.open {
-    max-height: 500px; /* içerik yüksekliğine göre artırabilirsin */
+    max-height: 1000px; /* içerik yüksekliğine göre artırabilirsin */
     opacity: 1;
     transform: translateY(0);
 }
