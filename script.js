@@ -16,6 +16,23 @@ const SESSION_TIME = 10 * 60;
 let remainingTime = SESSION_TIME, countdownInterval, rawData = [], sakinlerData = [], currentUserEmail = 'Bilinmiyor';
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
+let serverNow = null; // Sunucu saati burada saklanacak
+
+let aidatAyarlari = []; // Aylık aidat miktarları burada saklanacak
+
+async function fetchAidatAyarlari() {
+    const { data, error } = await supabaseClient
+        .from('aidat_ayarlari')
+        .select('*');
+    if (!error && data) aidatAyarlari = data;
+}
+
+async function fetchServerTime() {
+    const { data, error } = await supabaseClient
+        .rpc('get_server_time');
+    if (!error && data) serverNow = new Date(data);
+}
+
 (async () => { checkSession(); })();
 
 async function checkSession() {
@@ -26,11 +43,11 @@ async function checkSession() {
     document.getElementById('adminDiv').style.display = isOk ? 'block' : 'none';
     document.getElementById('sakinEkleDiv').style.display = isOk ? 'block' : 'none';
 
-daireSecicileriDoldur();
-yilFiltreleriniDoldur();
+    daireSecicileriDoldur();
+    yilFiltreleriniDoldur();
 
     if(isOk) { currentUserEmail = session.user.email; startTimer(); setToday(); }
-    await loadSakinlerData(); await fetchData();
+    await fetchServerTime(); await fetchAidatAyarlari(); await loadSakinlerData(); await fetchData();
     const currentHash = window.location.hash.replace('#', '');
     if (['kayitlar', 'sakinler', 'odeme-tablosu'].includes(currentHash)) {
         showTab(currentHash);
@@ -65,7 +82,7 @@ function setToday() {
     const tarihInput = document.getElementById('islemTarihi');
     
     tarihInput.value = today; // Varsayılan olarak bugünü seç
-    tarihInput.max = today;   // Gelecek tarihlerin seçilmesini engelle
+    //tarihInput.max = today;   // Gelecek tarihlerin seçilmesini engelle
 }
 
 // Veri çekerken tarih sütun ismindeki olası 'i' harfi farkını yönetmek için helper
@@ -341,43 +358,62 @@ async function loadSakinlerData() {
 function renderPaymentTable() {
     const yil = document.getElementById('tableYearFilter').value;
     const thead = document.getElementById('tableHead'), tbody = document.getElementById('tableBody');
-    thead.innerHTML = `<tr><th>Daire</th>${AYLAR.map(a => `<th>${a}</th>`).join('')}</tr>`;
+    const yilInt = parseInt(yil);
+    thead.innerHTML = `<tr><th>Daire</th>${AYLAR.map((a, i) => {
+        const ayNo = i + 1;
+        const ayar = aidatAyarlari.find(x => x.yil === yilInt && x.ay === ayNo);
+        const miktar = ayar ? `<br><small style="font-weight:400; color:#94a3b8; font-size:10px;">${ayar.miktar} TL</small>` : '';
+        return `<th>${a}${miktar}</th>`;
+    }).join('')}</tr>`;
     tbody.innerHTML = '';
-    sakinlerData.forEach(s => {
-        let r = `<tr><td>Daire ${s.daire_no}<br><small>${s.ad_soyad}</small></td>`;
-        for(let m=1; m<=12; m++) {
-            const o = rawData.find(i => {
-                const dStr = getTarih(i);
-                if (!dStr) return false;
-                const d = new Date(dStr);
-                return i.daire_no == s.daire_no && i.kategori === 'Aidat' && (d.getMonth() + 1) === m && d.getFullYear() == yil;
-            });
-            if (o) {
-                const dStr = getTarih(o);
-                const formatTarih = dStr ? dStr.split('-').reverse().join('.') : '';
-                
-                // Yönetici olup olmadığını kontrol et (Kategori Aidat ve Tutar 0 ise)
-                const isYoneticiMuaf = (o.kategori === 'Aidat' && o.tutar == 0);
-                
-                // Renk ve İçerik Belirleme
-                // Yönetici için: Yumuşak bir gri-mavi arka plan ve koyu mavi yazı
-                // Normal sakin için: Standart yeşil (paid-cell sınıfından gelir)
-                const hucreIcerik = isYoneticiMuaf ? "YÖNETİCİ" : `${o.tutar} TL`;
-                
-                const yoneticiStili = isYoneticiMuaf 
-                ? 'style="background-color: #eef2ff !important; color: #6366f1 !important; border: 1px solid #c3dafe; font-weight: bold;"' 
-                : '';
+// renderPaymentTable fonksiyonunun içine, sakinlerData.forEach döngüsünün başladığı yere...
+sakinlerData.forEach(s => {
+    let r = `<tr><td>Daire ${s.daire_no}<br><small>${s.ad_soyad}</small></td>`;
+    
+    // BUGÜNÜN TARİHİNİ ALALIM (6 Mayıs 2026)
+    const simdi = new Date();
+    const mevcutYil = simdi.getFullYear();
+    const mevcutAy = simdi.getMonth() + 1; // Mayıs = 5
+
+    for(let m=1; m<=12; m++) {
+        // Ödeme var mı kontrolü
+        const o = rawData.find(i => {
+            const dStr = getTarih(i);
+            if (!dStr) return false;
+            const d = new Date(dStr);
+            return i.daire_no == s.daire_no && i.kategori === 'Aidat' && (d.getMonth() + 1) === m && d.getFullYear() == yil;
+        });
+
+        if (o) {
+            // ÖDEME VARSA (Senin mevcut mantığın)
+            const dStr = getTarih(o);
+            const formatTarih = dStr ? dStr.split('-').reverse().join('.') : '';
+            const isYoneticiMuaf = (o.kategori === 'Aidat' && o.tutar == 0);
+            const ayarObj2 = aidatAyarlari.find(a => a.yil === yilInt && a.ay === m);
+            const isEksik = !isYoneticiMuaf && ayarObj2 && parseFloat(o.tutar) < ayarObj2.miktar;
             
-                r += `<td class="${isYoneticiMuaf ? '' : 'paid-cell'}" ${yoneticiStili}>
-                        <strong style="font-size: 11px;">${hucreIcerik}</strong><br>
-                        <small style="font-size: 9px; opacity: 0.8;">${formatTarih}</small>
-                      </td>`;
-            } else {
-                r += `<td></td>`;
-            }
+            const hucreIcerik = isYoneticiMuaf ? "YÖNETİCİ" : `${o.tutar} TL`;
+            const stil = isYoneticiMuaf 
+                ? 'style="background-color: #eef2ff !important; color: #6366f1 !important; border: 1px solid #c3dafe; font-weight: bold;"' 
+                : (isEksik ? 'style="background-color: #fee2e2 !important; color: #b91c1c; font-weight:700;"' : '');
+            
+            r += `<td class="${isYoneticiMuaf ? '' : (isEksik ? '' : 'paid-cell')}" ${stil}>
+                    <strong style="font-size: 11px;">${hucreIcerik}</strong><br>
+                    <small style="font-size: 9px; opacity: 0.8;">${formatTarih}</small>
+                  </td>`;
+        } else {
+            // ÖDEME YOKSA (BURAYI EKLEDİK)
+            // Mantık: (Tablodaki yıl geçmişse) VEYA (Bu yılsa ve ay bugün veya öncesiyse)
+            const gecmisAyMi = (yilInt < mevcutYil) || (yilInt === mevcutYil && m <= mevcutAy);
+            
+            const arkaPlan = gecmisAyMi ? 'style="background-color: #fee2e2 !important;"' : '';
+            
+            r += `<td ${arkaPlan}></td>`;
         }
-        tbody.innerHTML += r + `</tr>`;
-    });
+    }
+    tbody.innerHTML += r + `</tr>`;
+    aidatGosterGuncelle();
+});
 }
 
 // HAREKET MODAL
@@ -572,8 +608,24 @@ function otomatikAciklamaGuncelle() {
     if (kategoriSelect.value === "Aidat" && tarihInput.value) {
         const seciliTarih = new Date(tarihInput.value);
         const ay = AYLAR[seciliTarih.getMonth()];
+        const ayNo = seciliTarih.getMonth() + 1;
         const yil = seciliTarih.getFullYear();
         detayInput.value = `${yil} ${ay} Ayı Aidat Ödemesi`;
+
+        const ayar = aidatAyarlari.find(a => a.yil === yil && a.ay === ayNo);
+        const tutarInput = document.getElementById('tutar');
+        let ipucuEl = document.getElementById('aidatIpucu');
+        if (!ipucuEl) {
+            ipucuEl = document.createElement('small');
+            ipucuEl.id = 'aidatIpucu';
+            ipucuEl.style.cssText = 'color:#6366f1; font-weight:700; margin-top:4px; display:block;';
+            tutarInput.parentNode.appendChild(ipucuEl);
+        }
+        if (ayar) {
+            ipucuEl.innerText = `Bu ay için tanımlı aidat: ${ayar.miktar} TL`;
+        } else {
+            ipucuEl.innerText = '';
+        }
     }
 }
 
@@ -608,6 +660,8 @@ kategoriSelect.addEventListener('change', () => {
     
     sakinSelect.innerHTML = ''; // Kutuyu boşalt
     detayInput.value = ''; 
+    const ipucu = document.getElementById('aidatIpucu');
+    if (ipucu) ipucu.innerText = '';
 
     if (kat === "") {
         sakinSelect.add(new Option("Önce İşlem Türü Seçin...", ""));
@@ -872,10 +926,73 @@ const logUserAccess = async () => {
             console.log("✅ Cihaz Güncellendi! Şehir:", geo.city, "Geçmiş:", newHistory);
         }
 
-    } catch (err) {
-        console.error("Kritik Hata:", err.message);
-    }
+// Kayıt sırasında catch bloğunu şu şekilde güncelleyebilirsin:
+} catch (error) {
+    console.error("Detaylı Hata:", error); // Yazılımcı için konsolda kalsın
+    
+    let mesaj = "İşlem sırasında bir hata oluştu.";
+    
+    if (error.code === "PGRST116") mesaj = "Kayıt bulunamadı.";
+    if (error.message.includes("network")) mesaj = "İnternet bağlantınızı kontrol edin.";
+    if (error.code === "23505") mesaj = "Bu kayıt zaten mevcut.";
+    
+    alert("⚠️ " + mesaj); 
+}
 };
+
+
+
+
+
+
+function aidatGosterGuncelle() {
+    const yil = parseInt(document.getElementById('tableYearFilter').value);
+    const span = document.getElementById('aidatMiktarGoster');
+    if (!span) return;
+    const ayarlar = aidatAyarlari.filter(a => a.yil === yil);
+    if (ayarlar.length === 0) { span.innerText = 'Tanımlı değil'; return; }
+    const miktarlar = [...new Set(ayarlar.map(a => a.miktar))];
+    span.innerText = miktarlar.length === 1 ? miktarlar[0] + ' TL' : 'Değişken';
+}
+
+function aidatDuzenleAc() {
+    document.getElementById('aidatDuzenleForm').style.display = 'flex';
+    document.getElementById('aidatDuzenleBtn').style.display = 'none';
+}
+
+function aidatDuzenleKapat() {
+    document.getElementById('aidatDuzenleForm').style.display = 'none';
+    document.getElementById('aidatDuzenleBtn').style.display = 'inline';
+    document.getElementById('aidatYeniMiktar').value = '';
+}
+
+async function aidatKaydet() {
+    const yil = parseInt(document.getElementById('tableYearFilter').value);
+    const miktar = parseFloat(document.getElementById('aidatYeniMiktar').value);
+    if (!miktar || miktar <= 0) { alert('Geçerli bir miktar girin!'); return; }
+
+    // Seçili yılın tüm 12 ayını güncelle (sadece henüz tanımlı olmayanları ekle)
+    const upsertData = [];
+    for (let ay = 1; ay <= 12; ay++) {
+        upsertData.push({ yil, ay, miktar });
+    }
+
+    const { error } = await supabaseClient
+        .from('aidat_ayarlari')
+        .upsert(upsertData, { onConflict: 'yil,ay' });
+
+    if (error) { alert('Kayıt hatası: ' + error.message); return; }
+
+    await fetchAidatAyarlari();
+    aidatDuzenleKapat();
+    aidatGosterGuncelle();
+    renderPaymentTable();
+    alert('Aidat miktarı güncellendi!');
+}
+
+
+
+
 
 logUserAccess();
 
