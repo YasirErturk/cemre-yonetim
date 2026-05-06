@@ -38,16 +38,31 @@ async function fetchServerTime() {
 async function checkSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     const isOk = !!session;
+
     document.getElementById('loginDiv').style.display = isOk ? 'none' : 'flex';
     document.getElementById('timerDisplay').style.display = isOk ? 'flex' : 'none';
     document.getElementById('adminDiv').style.display = isOk ? 'block' : 'none';
     document.getElementById('sakinEkleDiv').style.display = isOk ? 'block' : 'none';
 
+    const adminAidatKontrol = document.getElementById('adminAidatKontrol');
+    if (adminAidatKontrol) {
+        adminAidatKontrol.style.display = isOk ? 'flex' : 'none';
+    }
+
     daireSecicileriDoldur();
     yilFiltreleriniDoldur();
 
-    if(isOk) { currentUserEmail = session.user.email; startTimer(); setToday(); }
-    await fetchServerTime(); await fetchAidatAyarlari(); await loadSakinlerData(); await fetchData();
+    if(isOk) { 
+        currentUserEmail = session.user.email; 
+        startTimer(); 
+        setToday(); 
+    }
+
+    await fetchServerTime(); 
+    await fetchAidatAyarlari(); 
+    await loadSakinlerData(); 
+    await fetchData();
+
     const currentHash = window.location.hash.replace('#', '');
     if (['kayitlar', 'sakinler', 'odeme-tablosu'].includes(currentHash)) {
         showTab(currentHash);
