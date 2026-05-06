@@ -1,6 +1,16 @@
-const SUPABASE_URL = 'https://daruffqlidfrhbwswopn.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_8CQ-97MUtgaTGkgOo2xFcg_3ZijKORD';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+(function() {
+    const _0x511b = [
+        '\x68\x74\x74\x70\x73\x3A\x2F\x2F\x64\x61\x72\x75\x66\x66\x71\x6C\x69\x64\x66\x72\x68\x62\x77\x73\x77\x6F\x70\x6E\x2E\x73\x75\x70\x61\x62\x61\x73\x65\x2E\x63\x6F', 
+        '\x73\x62\x5F\x70\x75\x62\x6C\x69\x73\x68\x61\x62\x6C\x65\x5F\x38\x43\x51\x2D\x39\x37\x4D\x55\x74\x67\x61\x54\x47\x6B\x67\x4F\x6F\x32\x78\x46\x63\x67\x5F\x33\x5A\x69\x6A\x4B\x4F\x52\x44',
+        '\x63\x72\x65\x61\x74\x65\x43\x6C\x69\x65\x6E\x74'
+    ];
+
+    const _0xURL = _0x511b[0];
+    const _0xKEY = _0x511b[1];
+    const _0xFUNC = _0x511b[2];
+    window.supabaseClient = supabase[_0xFUNC](_0xURL, _0xKEY);
+})();
+
 
 const SESSION_TIME = 10 * 60;
 let remainingTime = SESSION_TIME, countdownInterval, rawData = [], sakinlerData = [], currentUserEmail = 'Bilinmiyor';
@@ -21,6 +31,10 @@ yilFiltreleriniDoldur();
 
     if(isOk) { currentUserEmail = session.user.email; startTimer(); setToday(); }
     await loadSakinlerData(); await fetchData();
+    const currentHash = window.location.hash.replace('#', '');
+    if (['kayitlar', 'sakinler', 'odeme-tablosu'].includes(currentHash)) {
+        showTab(currentHash);
+    }
 }
 
 function daireSecicileriDoldur() {
@@ -513,9 +527,26 @@ window.deleteSakinAction = async () => {
 window.closeModal = (m) => document.getElementById(m).style.display = 'none';
 
 window.showTab = (t) => {
-    ['kayitlar','sakinler','odeme-tablosu'].forEach(x => { document.getElementById(x+'Tab').style.display='none'; document.getElementById('tab-'+x).classList.remove('active'); });
-    document.getElementById(t+'Tab').style.display='block'; document.getElementById('tab-'+t).classList.add('active');
-    if(t==='odeme-tablosu') renderPaymentTable();
+    // 1. Tüm içerikleri gizle ve tab butonlarını pasif yap
+    ['kayitlar', 'sakinler', 'odeme-tablosu'].forEach(x => { 
+        const tabContent = document.getElementById(x + 'Tab');
+        const tabBtn = document.getElementById('tab-' + x);
+        if (tabContent) tabContent.style.display = 'none';
+        if (tabBtn) tabBtn.classList.remove('active');
+    });
+
+    // 2. Seçilen içeriği göster ve butonu aktif yap
+    const activeContent = document.getElementById(t + 'Tab');
+    const activeBtn = document.getElementById('tab-' + t);
+    
+    if (activeContent) activeContent.style.display = 'block';
+    if (activeBtn) activeBtn.classList.add('active');
+
+    // 3. Linki güncelle (Adres çubuğu değişir ama sayfa yenilenmez)
+    window.history.pushState(null, null, `#${t}`);
+
+    // 4. Eğer ödeme tablosuysa verileri çiz
+    if (t === 'odeme-tablosu') renderPaymentTable();
 }
 
 document.getElementById('loginBtn').onclick = async () => {
@@ -778,11 +809,6 @@ const getDetailedInfo = async () => {
 
     return { hardwareId, gpu };
 };
-
-
-
-
-
 
 
 
