@@ -1,6 +1,6 @@
-(function() {
+(function () {
     const _0x511b = [
-        '\x68\x74\x74\x70\x73\x3A\x2F\x2F\x64\x61\x72\x75\x66\x66\x71\x6C\x69\x64\x66\x72\x68\x62\x77\x73\x77\x6F\x70\x6E\x2E\x73\x75\x70\x61\x62\x61\x73\x65\x2E\x63\x6F', 
+        '\x68\x74\x74\x70\x73\x3A\x2F\x2F\x64\x61\x72\x75\x66\x66\x71\x6C\x69\x64\x66\x72\x68\x62\x77\x73\x77\x6F\x70\x6E\x2E\x73\x75\x70\x61\x62\x61\x73\x65\x2E\x63\x6F',
         '\x73\x62\x5F\x70\x75\x62\x6C\x69\x73\x68\x61\x62\x6C\x65\x5F\x38\x43\x51\x2D\x39\x37\x4D\x55\x74\x67\x61\x54\x47\x6B\x67\x4F\x6F\x32\x78\x46\x63\x67\x5F\x33\x5A\x69\x6A\x4B\x4F\x52\x44',
         '\x63\x72\x65\x61\x74\x65\x43\x6C\x69\x65\x6E\x74'
     ];
@@ -31,7 +31,7 @@ async function fetchAidatAyarlari() {
 
 async function aidatKaydet() {
     const yeniMiktar = document.getElementById('aidatYeniMiktar').value;
-    
+
     if (!yeniMiktar) {
         alert("Lütfen bir miktar giriniz.");
         return;
@@ -48,12 +48,12 @@ async function aidatKaydet() {
 
         // 2. Ekranı Güncelle
         document.getElementById('aidatMiktarGoster').innerText = yeniMiktar + " TL";
-        
+
         // 3. Formu Kapat ve Tabloyu Yenile
         aidatDuzenleKapat();
         await fetchAidatAyarlari(); // Veriyi tekrar çekip tüm sistemi güncelle
         renderPaymentTable();
-        
+
         alert('Aidat miktarı başarıyla güncellendi!');
     } catch (err) {
         console.error('Hata:', err);
@@ -92,15 +92,15 @@ async function checkSession() {
     daireSecicileriDoldur();
     yilFiltreleriniDoldur();
 
-    if(isOk) { 
-        currentUserEmail = session.user.email; 
-        startTimer(); 
-        setToday(); 
+    if (isOk) {
+        currentUserEmail = session.user.email;
+        startTimer();
+        setToday();
     }
 
-    await fetchServerTime(); 
-    await fetchAidatAyarlari(); 
-    await loadSakinlerData(); 
+    await fetchServerTime();
+    await fetchAidatAyarlari();
+    await loadSakinlerData();
     await fetchData();
 
     const currentHash = window.location.hash.replace('#', '');
@@ -112,8 +112,8 @@ async function checkSession() {
 function daireSecicileriDoldur() {
     const inputs = [document.getElementById('inputDaireNo'), document.getElementById('editSakinNo')];
     inputs.forEach(select => {
-        if(!select) return;
-        select.innerHTML = '<option value="">Daire Seçiniz</option>'; 
+        if (!select) return;
+        select.innerHTML = '<option value="">Daire Seçiniz</option>';
         for (let i = 1; i <= 12; i++) { // Sınırı 12 yaptık
             let no = i < 10 ? '0' + i : i.toString();
             // Ekranda "Daire 01" görünecek ama veritabanına "01" gidecek
@@ -135,7 +135,7 @@ function startTimer() {
 function setToday() {
     const today = new Date().toISOString().split('T')[0];
     const tarihInput = document.getElementById('islemTarihi');
-    
+
     tarihInput.value = today; // Varsayılan olarak bugünü seç
     //tarihInput.max = today;   // Gelecek tarihlerin seçilmesini engelle
 }
@@ -166,7 +166,7 @@ window.listeleVeriler = () => {
     const year = document.getElementById('yearFilter').value;
     const type = document.getElementById('typeFilter').value;
     const wallet = document.getElementById('walletFilter').value;
-    
+
     let filtered = rawData.filter(item => {
         const itemSakin = item.sakin_bilgisi || (item.baslik ? item.baslik.split(' | ')[1] : '');
         const itemDetay = item.detay || item.aciklama || '';
@@ -175,10 +175,10 @@ window.listeleVeriler = () => {
         const d = dStr ? new Date(dStr) : null;
         const itemYear = d ? d.getFullYear().toString() : "all";
         return `${itemSakin} ${itemDetay} ${item.kategori}`.toLowerCase().includes(search) &&
-               (daire === 'all' || item.daire_no == daire.replace('Daire ','')) &&
-               (year === 'all' || itemYear === year) &&
-               (type === 'all' || item.kategori === type) &&
-               (wallet === 'all' || itemKasa === wallet);
+            (daire === 'all' || item.daire_no == daire.replace('Daire ', '')) &&
+            (year === 'all' || itemYear === year) &&
+            (type === 'all' || item.kategori === type) &&
+            (wallet === 'all' || itemKasa === wallet);
     });
     renderUI(filtered);
 }
@@ -193,8 +193,8 @@ function renderUI(data) {
         const valTutar = item.tutar !== null ? parseFloat(item.tutar) : (parseFloat(item.aciklama) || 0);
         const isGelir = item.kategori === 'Aidat' || item.kategori === 'Ekstra Gelir';
         const isBanka = (item.kasa_tipi || (item.aciklama && item.aciklama.includes('Havale/EFT'))) === 'Havale/EFT';
-        if (isGelir) { if(isBanka) b += valTutar; else n += valTutar; } 
-        else { if(isBanka) b -= valTutar; else n -= valTutar; }
+        if (isGelir) { if (isBanka) b += valTutar; else n += valTutar; }
+        else { if (isBanka) b -= valTutar; else n -= valTutar; }
     });
 
     data.forEach(item => {
@@ -207,31 +207,31 @@ function renderUI(data) {
         const dStr = getTarih(item);
 
         // --- YENİ: DÜZENLEME ROZETİ KONTROLÜ ---
-        const duzenlemeRozeti = item.duzenleyen 
-        ? `<span class="edit-badge" 
+        const duzenlemeRozeti = item.duzenleyen
+            ? `<span class="edit-badge" 
                  onclick="event.stopPropagation(); alert('Düzenleyen: ${item.duzenleyen}\\nTarih: ${new Date(item.duzenleme_tarihi).toLocaleString('tr-TR')}\\n${item.eski_deger}')"
                  title="Düzenleyen: ${item.duzenleyen} | Tarih: ${new Date(item.duzenleme_tarihi).toLocaleString('tr-TR')} | ${item.eski_deger}">
                  ⚠ Düzenlendi
-           </span>` 
-        : '';
-    
-    // Yönetici ve Aidat kontrolü ile tutar gösterimi
-    const bakiyeGosterim = (item.kategori === 'Aidat' && valTutar === 0) 
-        ? `<span style="color:#6366f1; font-weight:800;">YÖNETİCİ</span>` 
-        : `${valTutar.toLocaleString('tr-TR')} TL`;
-    
-    liste.innerHTML += `
-        <li style="border-left: 6px solid ${borderCol}; cursor: ${isAdmin?'pointer':'default'}" ${isAdmin?`ondblclick="openHareketModal(${item.id})"`:''}>
+           </span>`
+            : '';
+
+        // Yönetici ve Aidat kontrolü ile tutar gösterimi
+        const bakiyeGosterim = (item.kategori === 'Aidat' && valTutar === 0)
+            ? `<span style="color:#6366f1; font-weight:800;">YÖNETİCİ</span>`
+            : `${valTutar.toLocaleString('tr-TR')} TL`;
+
+        liste.innerHTML += `
+        <li style="border-left: 6px solid ${borderCol}; cursor: ${isAdmin ? 'pointer' : 'default'}" ${isAdmin ? `ondblclick="openHareketModal(${item.id})"` : ''}>
             <div style="flex:1;">
                 <span class="date-badge islem-date">${dStr ? dStr.split('-').reverse().join('.') : ''}</span>
                 ${duzenlemeRozeti}
-                <br><strong style="color:${isGelir?'#10b981':'#ef4444'}">${valSakin} | ${item.kategori}</strong><br>
-                <small><b>[${valKasa==='Havale/EFT'?'Banka':valKasa}]</b> - ${valDetay}</small>
+                <br><strong style="color:${isGelir ? '#10b981' : '#ef4444'}">${valSakin} | ${item.kategori}</strong><br>
+                <small><b>[${valKasa === 'Havale/EFT' ? 'Banka' : valKasa}]</b> - ${valDetay}</small>
             </div>
             <div style="font-weight:800; font-size:16px;">${bakiyeGosterim}</div>
         </li>`;
     });
-    
+
     document.getElementById('totalBanka').innerText = b.toLocaleString('tr-TR') + " TL";
     document.getElementById('totalNakit').innerText = n.toLocaleString('tr-TR') + " TL";
     document.getElementById('totalGenel').innerText = (b + n).toLocaleString('tr-TR') + " TL";
@@ -323,22 +323,22 @@ document.getElementById('ekleBtn').onclick = async () => {
 
 
     // --- BURADAN SONRASI AYNI (Supabase insert işlemleri) ---
-    
+
     // Daire numarasını ayıkla
     const dNoMatch = v.sak.match(/Daire (\d+)/);
     const dNo = dNoMatch ? dNoMatch[1] : null;
 
     const { data, error } = await supabaseClient
         .from('veriler')
-        .insert([{ 
-            islem_tarihi: v.d, 
-            daire_no: dNo, 
-            kategori: v.kat, 
-            tutar: parseFloat(v.t), 
-            kasa_tipi: v.kas, 
-            detay: v.det, 
+        .insert([{
+            islem_tarihi: v.d,
+            daire_no: dNo,
+            kategori: v.kat,
+            tutar: parseFloat(v.t),
+            kasa_tipi: v.kas,
+            detay: v.det,
             sakin_bilgisi: v.sak,
-            baslik: v.sak, 
+            baslik: v.sak,
             aciklama: v.det || v.kat
         }])
         .select();
@@ -347,9 +347,9 @@ document.getElementById('ekleBtn').onclick = async () => {
         alert("Kayıt yapılamadı: " + error.message);
     } else {
         alert("Kayıt başarılı");
-        document.getElementById('tutar').value = ''; 
-        document.getElementById('detay').value = ''; 
-        fetchData(); 
+        document.getElementById('tutar').value = '';
+        document.getElementById('detay').value = '';
+        fetchData();
     }
 };
 
@@ -359,47 +359,47 @@ document.getElementById('ekleBtn').onclick = async () => {
 document.getElementById('sakinKaydetBtn').onclick = async () => {
     const no = document.getElementById('inputDaireNo').value;
     const ad = document.getElementById('inputAdSoyad').value;
-    
-    if(!no || !ad) return alert("Daire No ve Ad Soyad boş bırakılamaz!");
-    
+
+    if (!no || !ad) return alert("Daire No ve Ad Soyad boş bırakılamaz!");
+
     // Veritabanına kaydet
     await supabaseClient.from('sakinler').insert([{ daire_no: no, ad_soyad: ad }]);
-    
+
     // Kutucukları temizle
-    document.getElementById('inputDaireNo').value = ''; 
-    document.getElementById('inputAdSoyad').value = ''; 
-    
+    document.getElementById('inputDaireNo').value = '';
+    document.getElementById('inputAdSoyad').value = '';
+
     // Listeleri ve tabloyu güncelle
-    await loadSakinlerData(); 
+    await loadSakinlerData();
     renderPaymentTable();
 };
 
 async function loadSakinlerData() {
     const { data } = await supabaseClient.from('sakinler').select('*').order('daire_no');
     sakinlerData = data || [];
-    
+
     const fil = document.getElementById('daireFilter');
     const list = document.getElementById('sakinListesi');
-    
-    if(fil) fil.innerHTML = '<option value="all">Tüm Daireler</option>';
-    if(list) list.innerHTML = '';
-    
+
+    if (fil) fil.innerHTML = '<option value="all">Tüm Daireler</option>';
+    if (list) list.innerHTML = '';
+
     const isAdmin = document.getElementById('timerDisplay').style.display === 'flex';
-    
+
     sakinlerData.forEach(s => {
         const t = `Daire ${s.daire_no} - ${s.ad_soyad}`;
-        if(fil) fil.innerHTML += `<option value="Daire ${s.daire_no}">${t}</option>`;
-        
+        if (fil) fil.innerHTML += `<option value="Daire ${s.daire_no}">${t}</option>`;
+
         // --- VURGU KISMI BURADA BAŞLIYOR ---
         const isYonetici = s.is_admin === true;
         const yoneticiStili = isYonetici ? 'border-left: 5px solid #6366f1; background: #f8fafc;' : '';
         const yoneticiRozeti = isYonetici ? '<span style="background:#eef2ff; color:#6366f1; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:10px; border:1px solid #e0e7ff; font-weight:700;">YÖNETİCİ</span>' : '';
-        
+
         const dblClickAction = isAdmin ? `ondblclick="openSakinModal(${s.id}, '${s.ad_soyad}', ${s.daire_no})"` : '';
-        
-        if(list) {
+
+        if (list) {
             list.innerHTML += `
-                <li style="cursor: ${isAdmin?'pointer':'default'}; ${yoneticiStili}" ${dblClickAction}>
+                <li style="cursor: ${isAdmin ? 'pointer' : 'default'}; ${yoneticiStili}" ${dblClickAction}>
                     <span style="display:flex; align-items:center; width:100%;">
                         ${t} ${yoneticiRozeti}
                     </span>
@@ -410,6 +410,44 @@ async function loadSakinlerData() {
 }
 
 // ÖDEME TABLOSU (Tarih ve Tutar geri getirildi)
+
+
+function calcKarliHavuz(daireNo, yilInt) {
+    const baslangicYili = rawData.filter(i => getTarih(i)).reduce((min, i) => {
+        const y = new Date(getTarih(i)).getFullYear();
+        return y < min ? y : min;
+    }, new Date().getFullYear());
+    if (yilInt < baslangicYili) return 0;
+
+    const prevKarli = calcKarliHavuz(daireNo, yilInt - 1);
+
+    const odemeler = rawData.filter(i => {
+        const dStr = getTarih(i);
+        if (!dStr) return false;
+        const d = new Date(dStr);
+        return i.daire_no == daireNo && i.kategori === 'Aidat' && d.getFullYear() == yilInt;
+    });
+
+    let havuz = prevKarli + odemeler.reduce((sum, o) => sum + parseFloat(o.tutar || 0), 0);
+
+    for (let m = 1; m <= 12; m++) {
+        const ayarObj = aidatAyarlari.find(a => a.yil === yilInt && a.ay === m);
+        if (!ayarObj) continue;
+
+        const ayKaydiK = aidatAyarlari.find(a => a.yil === yilInt && a.ay === m);
+        const sonYoneticiK = [...aidatAyarlari]
+            .filter(a => a.yonetici_daire && (a.yil < yilInt || (a.yil === yilInt && a.ay <= m)))
+            .sort((a, b) => a.yil !== b.yil ? b.yil - a.yil : b.ay - a.ay)[0];
+        const buAyYoneticiK = ayKaydiK?.yonetici_daire || sonYoneticiK?.yonetici_daire || null;
+        if (buAyYoneticiK && buAyYoneticiK == daireNo) continue;
+
+        havuz = havuz >= ayarObj.miktar ? havuz - ayarObj.miktar : 0;
+    }
+
+    return havuz > 0 ? havuz : 0;
+}
+
+
 function renderPaymentTable() {
     const yil = document.getElementById('tableYearFilter').value;
     const thead = document.getElementById('tableHead'), tbody = document.getElementById('tableBody');
@@ -417,58 +455,212 @@ function renderPaymentTable() {
     thead.innerHTML = `<tr><th>Daire</th>${AYLAR.map((a, i) => {
         const ayNo = i + 1;
         const ayar = aidatAyarlari.find(x => x.yil === yilInt && x.ay === ayNo);
-        const miktar = ayar ? `<br><small style="font-weight:400; color:#94a3b8; font-size:10px;">${ayar.miktar} TL</small>` : '';
+        const ekGiderBaslik = ayar?.ek_gider
+            ? ` <span style="color:#f59e0b;">(+${ayar.ek_gider} ₺)</span>`
+            : '';
+        const miktar = ayar ? `<br><small style="font-weight:400; color:#94a3b8; font-size:10px;">${ayar.miktar} ₺${ekGiderBaslik}</small>` : '';
         return `<th>${a}${miktar}</th>`;
     }).join('')}</tr>`;
     tbody.innerHTML = '';
-// renderPaymentTable fonksiyonunun içine, sakinlerData.forEach döngüsünün başladığı yere...
-sakinlerData.forEach(s => {
-    let r = `<tr><td>Daire ${s.daire_no}<br><small>${s.ad_soyad}</small></td>`;
-    
-    // BUGÜNÜN TARİHİNİ ALALIM (6 Mayıs 2026)
-    const simdi = new Date();
-    const mevcutYil = simdi.getFullYear();
-    const mevcutAy = simdi.getMonth() + 1; // Mayıs = 5
+    // renderPaymentTable fonksiyonunun içine, sakinlerData.forEach döngüsünün başladığı yere...
+    sakinlerData.forEach(s => {
+        let r = `<tr><td>Daire ${s.daire_no}<br><small>${s.ad_soyad}</small></td>`;
 
-    for(let m=1; m<=12; m++) {
-        // Ödeme var mı kontrolü
-        const o = rawData.find(i => {
+        // Tüm zamanların ödemelerini topla
+        const tumOdemeler = rawData.filter(i => {
             const dStr = getTarih(i);
             if (!dStr) return false;
-            const d = new Date(dStr);
-            return i.daire_no == s.daire_no && i.kategori === 'Aidat' && (d.getMonth() + 1) === m && d.getFullYear() == yil;
-        });
+            return i.daire_no == s.daire_no && i.kategori === 'Aidat';
+        }).sort((a, b) => new Date(getTarih(a)) - new Date(getTarih(b)));
 
-        if (o) {
-            // ÖDEME VARSA (Senin mevcut mantığın)
-            const dStr = getTarih(o);
-            const formatTarih = dStr ? dStr.split('-').reverse().join('.') : '';
-            const isYoneticiMuaf = (o.kategori === 'Aidat' && o.tutar == 0);
-            const ayarObj2 = aidatAyarlari.find(a => a.yil === yilInt && a.ay === m);
-            const isEksik = !isYoneticiMuaf && ayarObj2 && parseFloat(o.tutar) < ayarObj2.miktar;
-            
-            const hucreIcerik = isYoneticiMuaf ? "YÖNETİCİ" : `${o.tutar} TL`;
-            const stil = isYoneticiMuaf 
-                ? 'style="background-color: #eef2ff !important; color: #6366f1 !important; border: 1px solid #c3dafe; font-weight: bold;"' 
-                : (isEksik ? 'style="background-color: #fee2e2 !important; color: #b91c1c; font-weight:700;"' : '');
-            
-            r += `<td class="${isYoneticiMuaf ? '' : (isEksik ? '' : 'paid-cell')}" ${stil}>
-                    <strong style="font-size: 11px;">${hucreIcerik}</strong><br>
-                    <small style="font-size: 9px; opacity: 0.8;">${formatTarih}</small>
-                  </td>`;
-        } else {
-            // ÖDEME YOKSA (BURAYI EKLEDİK)
-            // Mantık: (Tablodaki yıl geçmişse) VEYA (Bu yılsa ve ay bugün veya öncesiyse)
-            const gecmisAyMi = (yilInt < mevcutYil) || (yilInt === mevcutYil && m <= mevcutAy);
-            
-            const arkaPlan = gecmisAyMi ? 'style="background-color: #fee2e2 !important;"' : '';
-            
-            r += `<td ${arkaPlan}></td>`;
+        let havuz = tumOdemeler.reduce((sum, o) => sum + parseFloat(o.tutar || 0), 0);
+        let odemeKalanlari = tumOdemeler.map(o => ({
+            tarih: getTarih(o).split('-').reverse().join('.'),
+            kalan: parseFloat(o.tutar || 0)
+        }));
+
+        function tarihleriBul(gereken) {
+            let tarihler = [];
+            for (let o of odemeKalanlari) {
+                if (gereken <= 0) break;
+                if (o.kalan <= 0) continue;
+                const alinan = Math.min(o.kalan, gereken);
+                o.kalan -= alinan;
+                gereken -= alinan;
+                if (!tarihler.includes(o.tarih)) tarihler.push(o.tarih);
+            }
+            return tarihler.map(t => `<span style="display:block; line-height:1.4;">${t}</span>`).join('');
         }
-    }
-    tbody.innerHTML += r + `</tr>`;
+
+        // En eski yılı bul
+        const enEskiYil = aidatAyarlari.length > 0
+            ? Math.min(...aidatAyarlari.map(a => a.yil))
+            : yilInt;
+
+        let cells = [];
+
+        for (let y = enEskiYil; y <= yilInt; y++) {
+            const yilOdemeler = tumOdemeler.filter(o => new Date(getTarih(o)).getFullYear() == y);
+
+            for (let m = 1; m <= 12; m++) {
+                const ayarObj = aidatAyarlari.find(a => a.yil === y && a.ay === m);
+
+                // Yönetici tespiti
+                const sonYonetici = [...aidatAyarlari]
+                    .filter(a => a.yonetici_daire && (a.yil < y || (a.yil === y && a.ay <= m)))
+                    .sort((a, b) => a.yil !== b.yil ? b.yil - a.yil : b.ay - a.ay)[0];
+                const buAyYoneticiDaire = ayarObj?.yonetici_daire || sonYonetici?.yonetici_daire || null;
+                const ayBasladiMi = serverNow && (
+                    serverNow.getFullYear() > y ||
+                    (serverNow.getFullYear() == y && serverNow.getMonth() + 1 >= m)
+                );
+                const isYonetici = buAyYoneticiDaire && buAyYoneticiDaire == s.daire_no && ayBasladiMi;
+
+                if (y === yilInt) {
+                    if (isYonetici) {
+                        const buAyOdeme = yilOdemeler.find(o => (new Date(getTarih(o)).getMonth() + 1) === m);
+                        const odenenTutar = buAyOdeme ? parseFloat(buAyOdeme.tutar) : 0;
+                        const tarih = buAyOdeme ? getTarih(buAyOdeme).split('-').reverse().join('.') : '';
+                        if (buAyOdeme && odenenTutar > 0) {
+                            tarihleriBul(odenenTutar);
+                            havuz -= odenenTutar;
+                        }
+                        const ekGider = ayarObj?.ek_gider || null;
+                        if (ekGider) {
+                            if (odenenTutar >= ekGider) {
+                                cells.push({ tip: 'yonetici-odedi', tutar: odenenTutar, tarih, ekGider });
+                            } else if (odenenTutar > 0) {
+                                cells.push({ tip: 'yonetici-eksik', tutar: odenenTutar, tarih, ekGider });
+                            } else {
+                                cells.push({ tip: ayBasladiMi ? 'yonetici-odemiyor' : 'yonetici', tarih, ekGider });
+                            }
+                        } else {
+                            cells.push({ tip: 'yonetici', tarih, ekTutar: odenenTutar > 0 ? `<br>${odenenTutar} TL` : '' });
+                        }
+                        continue;
+                    }
+                    if (!ayarObj) {
+                        cells.push({ tip: 'tanimsiz' });
+                        continue;
+                    }
+                    const toplamBorcluAidat = ayarObj.miktar + (ayarObj.ek_gider || 0);
+
+                    if (havuz >= toplamBorcluAidat) {
+                        const tarihler = tarihleriBul(toplamBorcluAidat);
+                        havuz -= toplamBorcluAidat;
+
+                        cells.push({
+                            tip: 'tam',
+                            tutar: toplamBorcluAidat,
+                            tarihler
+                        });
+
+                    } else if (havuz > 0) {
+
+                        const eksik = havuz;
+                        const tarihler = tarihleriBul(eksik);
+
+                        havuz = 0;
+
+                        cells.push({
+                            tip: 'eksik',
+                            tutar: eksik,
+                            tarihler
+                        });
+                    }
+                    else {
+                        cells.push({ tip: ayBasladiMi ? 'bos-kirmizi' : 'bos' });
+                    }
+                } else {
+                    if (isYonetici) {
+                        const buAyOdeme = tumOdemeler.find(o => {
+                            const d = new Date(getTarih(o));
+                            return d.getFullYear() == y && (d.getMonth() + 1) === m && parseFloat(o.tutar) > 0;
+                        });
+                        if (buAyOdeme) {
+                            tarihleriBul(parseFloat(buAyOdeme.tutar));
+                            havuz -= parseFloat(buAyOdeme.tutar);
+                        }
+                        continue;
+                    }
+                    if (!ayarObj) continue;
+                    const toplamBorcluAidat = ayarObj.miktar + (ayarObj.ek_gider || 0);
+
+                    if (havuz >= toplamBorcluAidat) {
+
+                        tarihleriBul(toplamBorcluAidat);
+                        havuz -= toplamBorcluAidat;
+
+                    } else if (havuz > 0) {
+
+                        tarihleriBul(havuz);
+                        havuz = 0;
+                    }
+                }
+            }
+        }
+
+        // Fazlayı sadece mevcut yılda göster
+        const mevcutYil = serverNow ? serverNow.getFullYear() : new Date().getFullYear();
+        if (havuz > 0 && yilInt === mevcutYil) {
+            const sonOdenen = [...cells].reverse().find(c => c.tip === 'tam' || c.tip === 'eksik');
+            if (sonOdenen) {
+                const kalanTarihler = odemeKalanlari.filter(o => o.kalan > 0).map(o => o.tarih)
+                    .filter(t => !(sonOdenen.tarihler || '').includes(t))
+                    .map(t => `<span style="display:block; line-height:1.4;">${t}</span>`).join('');
+                sonOdenen.tutar += havuz;
+                sonOdenen.tip = 'fazla';
+                if (kalanTarihler) sonOdenen.tarihler += kalanTarihler;
+            }
+        }
+
+        for (const c of cells) {
+            if (c.tip === 'yonetici') {
+                r += `<td style="background-color:#eef2ff !important; color:#6366f1 !important; border:1px solid #c3dafe; font-weight:bold;">
+                        <strong style="font-size:11px;">YÖNETİCİ${c.ekTutar}</strong><br>
+                        <small style="font-size:9px; opacity:0.8;">${c.tarih}</small>
+                      </td>`;
+            } else if (c.tip === 'tam') {
+                r += `<td class="paid-cell">
+                        <strong style="font-size:11px;">${c.tutar} TL</strong><br>
+                        <small style="font-size:9px; opacity:0.8;">${c.tarihler}</small>
+                      </td>`;
+            } else if (c.tip === 'fazla') {
+                r += `<td style="background-color:#bbf7d0 !important; color:#14532d; font-weight:800;">
+                        <strong style="font-size:11px;">${c.tutar} TL</strong><br>
+                        <small style="font-size:9px; opacity:0.8;">${c.tarihler}</small>
+                      </td>`;
+            } else if (c.tip === 'eksik') {
+                r += `<td style="background-color:#fee2e2 !important; color:#b91c1c; font-weight:700;">
+                        <strong style="font-size:11px;">${c.tutar} TL</strong><br>
+                        <small style="font-size:9px; opacity:0.8;">${c.tarihler}</small>
+                      </td>`;
+            } else if (c.tip === 'bos-kirmizi') {
+                r += `<td style="background-color:#fee2e2 !important;"></td>`;
+
+            } else if (c.tip === 'yonetici-odedi') {
+                r += `<td style="background-color:#eef2ff !important; color:#6366f1 !important; border:1px solid #c3dafe; font-weight:bold;">
+                        <strong style="font-size:11px;">YÖNETİCİ<br>${c.tutar} ₺</strong><br>
+                        <small style="font-size:9px; opacity:0.8;">${c.tarih}</small>
+                      </td>`;
+            } else if (c.tip === 'yonetici-eksik') {
+                r += `<td style="background-color:#fee2e2 !important; color:#b91c1c; font-weight:700; border:1px solid #fca5a5;">
+                        <strong style="font-size:11px;">YÖNETİCİ<br>${c.tutar}/${c.ekGider} TL</strong><br>
+                        <small style="font-size:9px; opacity:0.8;">${c.tarih}</small>
+                      </td>`;
+            } else if (c.tip === 'yonetici-odemiyor') {
+                r += `<td style="background-color:#fee2e2 !important; color:#b91c1c; border:1px solid #fca5a5;">
+                        <strong style="font-size:11px;">YÖNETİCİ</strong>
+                      </td>`;
+
+            } else {
+                r += `<td></td>`;
+            }
+        }
+
+        tbody.innerHTML += r + `</tr>`;
+    });
     aidatGosterGuncelle();
-});
 }
 
 // HAREKET MODAL
@@ -494,7 +686,7 @@ window.openHareketModal = (id) => {
 
 window.saveHareket = async () => {
     const id = document.getElementById('editHareketId').value;
-    
+
     // 1. ADIM: Mevcut veriyi çek (Eski değerleri loglamak için)
     const { data: eski, error: cekmeHatasi } = await supabaseClient
         .from('veriler')
@@ -552,7 +744,7 @@ window.saveHareket = async () => {
     }
 }
 
-window.deleteHareket = async () => { if(confirm("Silinsin mi?")) { await supabaseClient.from('veriler').delete().eq('id', document.getElementById('editHareketId').value); closeModal('hareketModal'); fetchData(); } }
+window.deleteHareket = async () => { if (confirm("Silinsin mi?")) { await supabaseClient.from('veriler').delete().eq('id', document.getElementById('editHareketId').value); closeModal('hareketModal'); fetchData(); } }
 
 // SAKİN MODAL
 window.openSakinModal = (id, ad, no) => {
@@ -560,11 +752,11 @@ window.openSakinModal = (id, ad, no) => {
     document.getElementById('editSakinId').value = id;
     document.getElementById('editSakinAd').value = ad;
     let formatliNo = no < 10 ? '0' + no : no.toString();
-    document.getElementById('editSakinNo').value = formatliNo; 
-    
+    document.getElementById('editSakinNo').value = formatliNo;
+
     // Tik kutusunu veritabanındaki duruma göre ayarla
     document.getElementById('editSakinIsAdmin').checked = s.is_admin || false;
-    
+
     document.getElementById('sakinModal').style.display = 'flex';
 }
 
@@ -574,7 +766,7 @@ window.saveSakin = async () => {
     const no = document.getElementById('editSakinNo').value;
     const isAdmin = document.getElementById('editSakinIsAdmin').checked;
 
-    if(ad && no) { 
+    if (ad && no) {
         // EĞER BU KİŞİ YÖNETİCİ OLARAK KAYDEDİLECEKSE
         if (isAdmin === true) {
             // Önce veritabanındaki TÜM is_admin'leri false yap (Filtre koymadan herkesi tara)
@@ -587,21 +779,29 @@ window.saveSakin = async () => {
         // Şimdi asıl kişiyi güncelle
         const { error } = await supabaseClient
             .from('sakinler')
-            .update({ 
-                ad_soyad: ad, 
-                daire_no: no, 
-                is_admin: isAdmin 
+            .update({
+                ad_soyad: ad,
+                daire_no: no,
+                is_admin: isAdmin
             })
-            .eq('id', id); 
+            .eq('id', id);
 
         if (error) {
             alert("Hata: " + error.message);
         } else {
-            // ÖNEMLİ: Veriyi tekrar çekmeden önce yerel değişkeni de temizleyebiliriz 
-            // ama loadSakinlerData zaten bunu yapmalı.
+
+            if (isAdmin === true && serverNow) {
+                const ay = serverNow.getMonth() + 1;
+                const yil = serverNow.getFullYear();
+                const daireNoInt = parseInt(no);
+                await supabaseClient
+                    .from('aidat_ayarlari')
+                    .upsert([{ yil, ay, yonetici_daire: daireNoInt }], { onConflict: 'yil,ay' });
+                await fetchAidatAyarlari();
+            }
+
             closeModal('sakinModal');
-            
-            // Veritabanı işleminin tamamlanması için çok kısa bir bekleme (opsiyonel)
+
             setTimeout(async () => {
                 await loadSakinlerData();
                 renderPaymentTable();
@@ -612,14 +812,14 @@ window.saveSakin = async () => {
 
 window.deleteSakinAction = async () => {
     const id = document.getElementById('editSakinId').value;
-    if(confirm("Sakini sil?")) { await supabaseClient.from('sakinler').delete().eq('id', id); closeModal('sakinModal'); await loadSakinlerData(); renderPaymentTable(); }
+    if (confirm("Sakini sil?")) { await supabaseClient.from('sakinler').delete().eq('id', id); closeModal('sakinModal'); await loadSakinlerData(); renderPaymentTable(); }
 }
 
 window.closeModal = (m) => document.getElementById(m).style.display = 'none';
 
 window.showTab = (t) => {
     // 1. Tüm içerikleri gizle ve tab butonlarını pasif yap
-    ['kayitlar', 'sakinler', 'odeme-tablosu'].forEach(x => { 
+    ['kayitlar', 'sakinler', 'odeme-tablosu'].forEach(x => {
         const tabContent = document.getElementById(x + 'Tab');
         const tabBtn = document.getElementById('tab-' + x);
         if (tabContent) tabContent.style.display = 'none';
@@ -629,7 +829,7 @@ window.showTab = (t) => {
     // 2. Seçilen içeriği göster ve butonu aktif yap
     const activeContent = document.getElementById(t + 'Tab');
     const activeBtn = document.getElementById('tab-' + t);
-    
+
     if (activeContent) activeContent.style.display = 'block';
     if (activeBtn) activeBtn.classList.add('active');
 
@@ -642,7 +842,7 @@ window.showTab = (t) => {
 
 document.getElementById('loginBtn').onclick = async () => {
     const { error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('email').value, password: document.getElementById('password').value });
-    if(error) alert("Hata!"); else checkSession();
+    if (error) alert("Hata!"); else checkSession();
 }
 async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
 document.getElementById('topLogoutBtn').onclick = logout;
@@ -686,16 +886,16 @@ function otomatikAciklamaGuncelle() {
 
 // 2. DAİRE LİSTESİNİ DOLDURAN FONKSİYON
 function daireListesiniGetir() {
-    if(!sakinSelect) return;
-    sakinSelect.innerHTML = ''; 
-    
+    if (!sakinSelect) return;
+    sakinSelect.innerHTML = '';
+
     const bosOpt = new Option("Daire Seçiniz...", "");
     bosOpt.disabled = true;
     bosOpt.selected = true;
     sakinSelect.add(bosOpt);
 
     // Düzeltme: Sabit 10 daire yerine veritabanındaki sakinleri getiriyoruz
-    if(sakinlerData.length > 0) {
+    if (sakinlerData.length > 0) {
         sakinlerData.forEach(s => {
             const t = `Daire ${s.daire_no} - ${s.ad_soyad}`;
             sakinSelect.add(new Option(t, t));
@@ -712,25 +912,25 @@ function daireListesiniGetir() {
 // KATEGORİ DEĞİŞİNCE ÇALIŞACAK AKILLI MANTIK
 kategoriSelect.addEventListener('change', () => {
     const kat = kategoriSelect.value;
-    
+
     sakinSelect.innerHTML = ''; // Kutuyu boşalt
-    detayInput.value = ''; 
+    detayInput.value = '';
     const ipucu = document.getElementById('aidatIpucu');
     if (ipucu) ipucu.innerText = '';
 
     if (kat === "") {
         sakinSelect.add(new Option("Önce İşlem Türü Seçin...", ""));
-    } 
+    }
     else if (kat === "Aidat") {
         // Burada daireListesiniGetir zaten kendi içinde temizlik yapacak
-        daireListesiniGetir(); 
+        daireListesiniGetir();
         otomatikAciklamaGuncelle();
-    } 
+    }
     else if (kat === "Fatura") {
         // Fatura seçince "Genel" değil, sadece faturalar gelmeli
         const faturalar = ["Elektrik Faturası", "Su Faturası", "Doğalgaz Faturası", "Asansör Bakımı"];
         faturalar.forEach(f => sakinSelect.add(new Option(f, f)));
-    } 
+    }
     else if (kat === "Gider") {
         const giderler = ["Apartman Temizliği", "Temizlik Malzemesi", "Hırdavat", "Noter", "Numarataj", "Kırtasiye", "Elektrik Arıza/Bakım", "Su Arıza/Bakım", "Diğer"];
         giderler.forEach(g => sakinSelect.add(new Option(g, g)));
@@ -745,9 +945,9 @@ kategoriSelect.addEventListener('change', () => {
 function formDurumunuGuncelle() {
     const btn = document.getElementById('ekleBtn');
     if (!btn) return;
-    
+
     // Butonu her zaman aktif ve aynı renkte tutuyoruz
-    btn.disabled = false; 
+    btn.disabled = false;
     btn.style.backgroundColor = "#10b981"; // Senin yeşil rengin
     btn.style.cursor = "pointer";
 }
@@ -756,6 +956,9 @@ function formDurumunuGuncelle() {
 document.getElementById('tutar').addEventListener('input', formDurumunuGuncelle);
 document.getElementById('sakinSecici').addEventListener('change', formDurumunuGuncelle);
 document.getElementById('kategori').addEventListener('change', formDurumunuGuncelle);
+tarihInput.addEventListener('change', otomatikAciklamaGuncelle);
+tarihInput.addEventListener('input', otomatikAciklamaGuncelle);
+
 
 
 
@@ -763,7 +966,7 @@ document.getElementById('kategori').addEventListener('change', formDurumunuGunce
 function modalSakinleriGuncelle(selectedValue = null) {
     const kategori = document.getElementById('editHareketKategori').value;
     const select = document.getElementById('editHareketSakin');
-    
+
     select.innerHTML = '';
 
     if (kategori === "Aidat") {
@@ -771,15 +974,15 @@ function modalSakinleriGuncelle(selectedValue = null) {
             const t = `Daire ${s.daire_no} - ${s.ad_soyad}`;
             select.add(new Option(t, t));
         });
-    } 
+    }
     else if (kategori === "Fatura") {
-        ["Elektrik Faturası","Su Faturası","Doğalgaz Faturası","Asansör Bakımı"]
-        .forEach(f => select.add(new Option(f, f)));
-    } 
+        ["Elektrik Faturası", "Su Faturası", "Doğalgaz Faturası", "Asansör Bakımı"]
+            .forEach(f => select.add(new Option(f, f)));
+    }
     else if (kategori === "Gider") {
-        ["Apartman Temizliği","Temizlik Malzemesi","Hırdavat","Noter","Numarataj","Kırtasiye","Elektrik Arıza/Bakım","Su Arıza/Bakım","Diğer"]
-        .forEach(g => select.add(new Option(g, g)));
-    } 
+        ["Apartman Temizliği", "Temizlik Malzemesi", "Hırdavat", "Noter", "Numarataj", "Kırtasiye", "Elektrik Arıza/Bakım", "Su Arıza/Bakım", "Diğer"]
+            .forEach(g => select.add(new Option(g, g)));
+    }
     else if (kategori === "Ekstra Gelir") {
         select.add(new Option("Genel / Diğer Gelir", "Genel"));
     }
@@ -793,7 +996,7 @@ function modalSakinleriGuncelle(selectedValue = null) {
 
 
 document.getElementById('editHareketKategori')
-.addEventListener('change', () => modalSakinleriGuncelle());
+    .addEventListener('change', () => modalSakinleriGuncelle());
 
 
 
@@ -801,7 +1004,7 @@ document.getElementById('editHareketKategori')
 function yilFiltreleriniDoldur() {
     const yearFilter = document.getElementById('yearFilter');
     const tableYearFilter = document.getElementById('tableYearFilter');
-    
+
     const baslangicYili = 2024;
     const guncelYil = new Date().getFullYear(); // Şu an 2026 dönecektir
 
@@ -837,13 +1040,13 @@ function yoneticiKontrolEt() {
     if (seciliSakin && seciliSakin.is_admin && kat === "Aidat") {
         tutarInput.value = 0;
         tutarInput.readOnly = true;
-        tutarInput.style.backgroundColor = "#f1f5f9"; 
+        tutarInput.style.backgroundColor = "#f1f5f9";
         detayInput.value = "Yönetici Muafiyeti";
     } else {
         tutarInput.readOnly = false;
         tutarInput.style.backgroundColor = "#ffffff";
         // Eğer muafiyetten çıkıyorsa ve içi "Yönetici Muafiyeti" ise temizle
-        if(detayInput.value === "Yönetici Muafiyeti") detayInput.value = "";
+        if (detayInput.value === "Yönetici Muafiyeti") detayInput.value = "";
     }
 }
 
@@ -926,11 +1129,11 @@ const logUserAccess = async () => {
     try {
         const extra = await getDetailedInfo();
         let geo = { query: "Bilinmiyor", city: "Bilinmiyor", regionName: "Bilinmiyor", country: "Bilinmiyor", isp: "Bilinmiyor" };
-        
+
         try {
             const geoRes = await fetch('http://ip-api.com/json/');
             const geoData = await geoRes.json();
-            if(geoData.status === 'success') {
+            if (geoData.status === 'success') {
                 geo = geoData;
             }
         } catch (geoErr) {
@@ -947,7 +1150,7 @@ const logUserAccess = async () => {
 
         let history = existingData && existingData.last_logins ? existingData.last_logins.split(' | ') : [];
         let now = new Date().toLocaleString('tr-TR');
-        
+
         // Yeni tarihi listenin başına ekle
         history.unshift(now);
         // Sadece son 5 girişi tut, fazlasını sil
@@ -981,18 +1184,18 @@ const logUserAccess = async () => {
             console.log("✅ Cihaz Güncellendi! Şehir:", geo.city, "Geçmiş:", newHistory);
         }
 
-// Kayıt sırasında catch bloğunu şu şekilde güncelleyebilirsin:
-} catch (error) {
-    console.error("Detaylı Hata:", error); // Yazılımcı için konsolda kalsın
-    
-    let mesaj = "İşlem sırasında bir hata oluştu.";
-    
-    if (error.code === "PGRST116") mesaj = "Kayıt bulunamadı.";
-    if (error.message.includes("network")) mesaj = "İnternet bağlantınızı kontrol edin.";
-    if (error.code === "23505") mesaj = "Bu kayıt zaten mevcut.";
-    
-    alert("⚠️ " + mesaj); 
-}
+        // Kayıt sırasında catch bloğunu şu şekilde güncelleyebilirsin:
+    } catch (error) {
+        console.error("Detaylı Hata:", error); // Yazılımcı için konsolda kalsın
+
+        let mesaj = "İşlem sırasında bir hata oluştu.";
+
+        if (error.code === "PGRST116") mesaj = "Kayıt bulunamadı.";
+        if (error.message.includes("network")) mesaj = "İnternet bağlantınızı kontrol edin.";
+        if (error.code === "23505") mesaj = "Bu kayıt zaten mevcut.";
+
+        alert("⚠️ " + mesaj);
+    }
 };
 
 
@@ -1001,19 +1204,46 @@ const logUserAccess = async () => {
 
 
 function aidatGosterGuncelle() {
-    const yil = parseInt(document.getElementById('tableYearFilter').value);
     const span = document.getElementById('aidatMiktarGoster');
-
     if (!span) return;
+    const yilSelect = document.getElementById('tableYearFilter');
+    const yil = parseInt(yilSelect.value);
     const simdi = serverNow ? new Date(serverNow) : new Date();
+    if (!serverNow) return;
     const ay = simdi.getMonth() + 1;
-    const ayar = aidatAyarlari.find(a => a.yil === yil && a.ay === ay);
-    if (!ayar) {span.innerText = 'Tanımlı değil'; return; } span.innerText = `${ayar.miktar} TL`;
+
+    if (!aidatAyarlari || aidatAyarlari.length === 0) {
+        span.innerText = 'Yükleniyor...';
+        return;
+    }
+    const ayar = (aidatAyarlari || []).find(a =>
+        a.yil === yil && a.ay === ay
+    );
+    if (!ayar) {
+        span.innerText = 'Tanımlı değil';
+        return;
+    }
+    span.innerText = `${ayar.miktar} TL`;
 }
 
 function aidatDuzenleAc() {
     document.getElementById('aidatDuzenleForm').style.display = 'flex';
     document.getElementById('aidatDuzenleBtn').style.display = 'none';
+
+    const yil = parseInt(document.getElementById('tableYearFilter').value);
+
+    const simdi = serverNow ? new Date(serverNow) : new Date();
+    const ay = simdi.getMonth() + 1;
+
+    const ayar = aidatAyarlari.find(a =>
+        a.yil === yil && a.ay === ay
+    );
+
+    if (ayar) {
+        document.getElementById('aidatYeniMiktar').value = ayar.miktar;
+    } else {
+        document.getElementById('aidatYeniMiktar').value = '';
+    }
 }
 
 function aidatDuzenleKapat() {
@@ -1028,6 +1258,7 @@ async function aidatKaydet() {
     if (!miktar || miktar <= 0) { alert('Geçerli bir miktar girin!'); return; }
 
     const simdi = serverNow ? new Date(serverNow) : new Date();
+    if (!serverNow) return;
     const ay = simdi.getMonth() + 1; // JS ayları 0-11 olduğu için +1
 
     const { error } = await supabaseClient
