@@ -27,6 +27,46 @@ async function fetchAidatAyarlari() {
     if (!error && data) aidatAyarlari = data;
 }
 
+
+
+async function aidatKaydet() {
+    const yeniMiktar = document.getElementById('aidatYeniMiktar').value;
+    
+    if (!yeniMiktar) {
+        alert("Lütfen bir miktar giriniz.");
+        return;
+    }
+
+    try {
+        // 1. Veritabanını Güncelle (Supabase tablonuzun adı 'ayarlar' veya 'aidat_ayarları' ise)
+        const { error } = await supabaseClient
+            .from('aidat_ayarları') // Burayı kendi tablo adınızla değiştirin
+            .update({ miktar: yeniMiktar })
+            .eq('id', 1); // Genellikle tek bir satır olur
+
+        if (error) throw error;
+
+        // 2. Ekranı Güncelle
+        document.getElementById('aidatMiktarGoster').innerText = yeniMiktar + " TL";
+        
+        // 3. Formu Kapat ve Tabloyu Yenile
+        aidatDuzenleKapat();
+        await fetchAidatAyarlari(); // Veriyi tekrar çekip tüm sistemi güncelle
+        renderPaymentTable();
+        
+        alert('Aidat miktarı başarıyla güncellendi!');
+    } catch (err) {
+        console.error('Hata:', err);
+        alert('Güncelleme sırasında bir hata oluştu.');
+    }
+}
+
+
+
+
+
+
+
 async function fetchServerTime() {
     const { data, error } = await supabaseClient
         .rpc('get_server_time');
@@ -963,11 +1003,12 @@ const logUserAccess = async () => {
 function aidatGosterGuncelle() {
     const yil = parseInt(document.getElementById('tableYearFilter').value);
     const span = document.getElementById('aidatMiktarGoster');
+
     if (!span) return;
-    const ayarlar = aidatAyarlari.filter(a => a.yil === yil);
-    if (ayarlar.length === 0) { span.innerText = 'Tanımlı değil'; return; }
-    const miktarlar = [...new Set(ayarlar.map(a => a.miktar))];
-    span.innerText = miktarlar.length === 1 ? miktarlar[0] + ' TL' : 'Değişken';
+    const simdi = serverNow ? new Date(serverNow) : new Date();
+    const ay = simdi.getMonth() + 1;
+    const ayar = aidatAyarlari.find(a => a.yil === yil && a.ay === ay);
+    if (!ayar) {span.innerText = 'Tanımlı değil'; return; } span.innerText = `${ayar.miktar} TL`;
 }
 
 function aidatDuzenleAc() {
@@ -986,15 +1027,15 @@ async function aidatKaydet() {
     const miktar = parseFloat(document.getElementById('aidatYeniMiktar').value);
     if (!miktar || miktar <= 0) { alert('Geçerli bir miktar girin!'); return; }
 
-    // Seçili yılın tüm 12 ayını güncelle (sadece henüz tanımlı olmayanları ekle)
-    const upsertData = [];
-    for (let ay = 1; ay <= 12; ay++) {
-        upsertData.push({ yil, ay, miktar });
-    }
+    const simdi = serverNow ? new Date(serverNow) : new Date();
+    const ay = simdi.getMonth() + 1; // JS ayları 0-11 olduğu için +1
 
     const { error } = await supabaseClient
         .from('aidat_ayarlari')
-        .upsert(upsertData, { onConflict: 'yil,ay' });
+        .upsert(
+            [{ yil, ay, miktar }],
+            { onConflict: 'yil,ay' }
+        );
 
     if (error) { alert('Kayıt hatası: ' + error.message); return; }
 
@@ -1002,11 +1043,8 @@ async function aidatKaydet() {
     aidatDuzenleKapat();
     aidatGosterGuncelle();
     renderPaymentTable();
-    alert('Aidat miktarı güncellendi!');
+    alert(`${AYLAR[ay - 1]} ${yil} aidatı güncellendi!`);
 }
-
-
-
 
 
 logUserAccess();
