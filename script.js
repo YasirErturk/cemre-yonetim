@@ -314,9 +314,8 @@ document.getElementById('ekleBtn').onclick = async () => {
     }
 
     const seciliSakin = sakinlerData.find(s => `Daire ${s.daire_no} - ${s.ad_soyad}` === v.sak);
-    const isYoneticiMuafiyeti = (v.kat === "Aidat" && seciliSakin && seciliSakin.is_admin);
 
-    if (!v.t || v.t < 0 || (v.t == 0 && !isYoneticiMuafiyeti)) {
+    if (!v.t || v.t < 0) {
         alert("Lütfen geçerli bir tutar giriniz!");
         return;
     }
@@ -456,9 +455,15 @@ function renderPaymentTable() {
         const ayNo = i + 1;
         const ayar = aidatAyarlari.find(x => x.yil === yilInt && x.ay === ayNo);
         const ekGiderBaslik = ayar?.ek_gider
-            ? ` <span style="color:#f59e0b;">(+${ayar.ek_gider} ₺)</span>`
+            ? `<br><span style="color:#f59e0b; font-size:9px;">+${ayar.ek_gider} ₺ ek ödeme</span>`
             : '';
-        const miktar = ayar ? `<br><small style="font-weight:400; color:#94a3b8; font-size:10px;">${ayar.miktar} ₺${ekGiderBaslik}</small>` : '';
+        const miktar = ayar
+            ? `<div style="height:34px; display:flex; align-items:center; justify-content:center;">
+                    <small style="font-weight:400; color:#94a3b8; font-size:10px; line-height:1.2;">
+                        ${ayar.miktar} ₺${ekGiderBaslik}
+                    </small>
+               </div>`
+            : '<div style="height:34px;"></div>';
         return `<th>${a}${miktar}</th>`;
     }).join('')}</tr>`;
     tbody.innerHTML = '';
@@ -641,13 +646,13 @@ function renderPaymentTable() {
             } else if (c.tip === 'yonetici-odedi') {
                 r += `<td style="background-color:#eef2ff !important; color:#6366f1 !important; border:1px solid #c3dafe; font-weight:bold;">
                         <strong style="font-size:11px;">YÖNETİCİ<br>${c.tutar} ₺</strong><br>
-                        <small style="font-size:9px; opacity:0.8;">${c.tarih}</small>
+                        <small style="font-size:9px; opacity:0.8; display:block; line-height:1.4;">${c.tarih}</small>
                       </td>`;
             } else if (c.tip === 'yonetici-eksik') {
                 r += `<td style="background-color:#fee2e2 !important; color:#b91c1c; font-weight:700; border:1px solid #fca5a5;">
-                        <strong style="font-size:11px;">YÖNETİCİ<br>${c.tutar}/${c.ekGider} TL</strong><br>
-                        <small style="font-size:9px; opacity:0.8;">${c.tarih}</small>
-                      </td>`;
+                                <strong style="font-size:11px;">YÖNETİCİ<br>${c.tutar}/${c.ekGider} TL</strong><br>
+                                <small style="font-size:9px; opacity:0.8; display:block; line-height:1.4;">${c.tarih}</small>
+                              </td>`;
             } else if (c.tip === 'yonetici-odemiyor') {
                 r += `<td style="background-color:#fee2e2 !important; color:#b91c1c; border:1px solid #fca5a5;">
                         <strong style="font-size:11px;">YÖNETİCİ</strong>
@@ -832,13 +837,24 @@ window.showTab = (t) => {
 
     if (activeContent) activeContent.style.display = 'block';
     if (activeBtn) activeBtn.classList.add('active');
+    // Sayfa değişince filtre/form kapanıp sıfırlansın
+    document.querySelectorAll('.section-content').forEach(el => {
+        el.classList.remove('open');
+    });
+
+    document.querySelectorAll('.section-header').forEach(h => {
+        h.classList.remove('active');
+    });
 
     // 3. Linki güncelle (Adres çubuğu değişir ama sayfa yenilenmez)
     window.history.pushState(null, null, `#${t}`);
 
     // 4. Eğer ödeme tablosuysa verileri çiz
     if (t === 'odeme-tablosu') renderPaymentTable();
+
 }
+
+
 
 document.getElementById('loginBtn').onclick = async () => {
     const { error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('email').value, password: document.getElementById('password').value });
@@ -1037,16 +1053,15 @@ function yoneticiKontrolEt() {
 
     const seciliSakin = sakinlerData.find(s => `Daire ${s.daire_no} - ${s.ad_soyad}` === seciliMetin);
 
-    if (seciliSakin && seciliSakin.is_admin && kat === "Aidat") {
-        tutarInput.value = 0;
-        tutarInput.readOnly = true;
-        tutarInput.style.backgroundColor = "#f1f5f9";
-        detayInput.value = "Yönetici Muafiyeti";
-    } else {
+    function yoneticiKontrolEt() {
+        const tutarInput = document.getElementById('tutar');
+        const detayInput = document.getElementById('detay');
+
+        // HER ZAMAN NORMAL DAVRAN
         tutarInput.readOnly = false;
         tutarInput.style.backgroundColor = "#ffffff";
-        // Eğer muafiyetten çıkıyorsa ve içi "Yönetici Muafiyeti" ise temizle
-        if (detayInput.value === "Yönetici Muafiyeti") detayInput.value = "";
+
+        // yönetici diye hiçbir şey yapma
     }
 }
 
