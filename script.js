@@ -1215,12 +1215,13 @@ const logUserAccess = async () => {
 
 
 
-
-
+// --- AİDAT VE EK ÖDEME YÖNETİMİ ---
 
 function aidatGosterGuncelle() {
-    const span = document.getElementById('aidatMiktarGoster');
-    if (!span) return;
+    const aidatSpan = document.getElementById('aidatMiktarGoster');
+    const ekOdemeSpan = document.getElementById('ekOdemeMiktarGoster');
+    if (!aidatSpan) return;
+
     const yilSelect = document.getElementById('tableYearFilter');
     const yil = parseInt(yilSelect.value);
     const simdi = serverNow ? new Date(serverNow) : new Date();
@@ -1228,37 +1229,36 @@ function aidatGosterGuncelle() {
     const ay = simdi.getMonth() + 1;
 
     if (!aidatAyarlari || aidatAyarlari.length === 0) {
-        span.innerText = 'Yükleniyor...';
+        aidatSpan.innerText = 'Yükleniyor...';
+        if (ekOdemeSpan) ekOdemeSpan.innerText = 'Yükleniyor...';
         return;
     }
-    const ayar = (aidatAyarlari || []).find(a =>
-        a.yil === yil && a.ay === ay
-    );
+
+    const ayar = (aidatAyarlari || []).find(a => a.yil === yil && a.ay === ay);
+
     if (!ayar) {
-        span.innerText = 'Tanımlı değil';
+        aidatSpan.innerText = 'Tanımlı değil';
+        if (ekOdemeSpan) ekOdemeSpan.innerText = '0 TL';
         return;
     }
-    span.innerText = `${ayar.miktar} TL`;
+
+    aidatSpan.innerText = `${ayar.miktar || 0} TL`;
+    if (ekOdemeSpan) {
+        ekOdemeSpan.innerText = ayar.ek_gider ? `${ayar.ek_gider} TL` : '0 TL';
+    }
 }
 
+// --- AİDAT İŞLEMLERİ ---
 function aidatDuzenleAc() {
     document.getElementById('aidatDuzenleForm').style.display = 'flex';
     document.getElementById('aidatDuzenleBtn').style.display = 'none';
 
     const yil = parseInt(document.getElementById('tableYearFilter').value);
-
     const simdi = serverNow ? new Date(serverNow) : new Date();
     const ay = simdi.getMonth() + 1;
 
-    const ayar = aidatAyarlari.find(a =>
-        a.yil === yil && a.ay === ay
-    );
-
-    if (ayar) {
-        document.getElementById('aidatYeniMiktar').value = ayar.miktar;
-    } else {
-        document.getElementById('aidatYeniMiktar').value = '';
-    }
+    const ayar = aidatAyarlari.find(a => a.yil === yil && a.ay === ay);
+    document.getElementById('aidatYeniMiktar').value = ayar ? ayar.miktar : '';
 }
 
 function aidatDuzenleKapat() {
@@ -1270,11 +1270,11 @@ function aidatDuzenleKapat() {
 async function aidatKaydet() {
     const yil = parseInt(document.getElementById('tableYearFilter').value);
     const miktar = parseFloat(document.getElementById('aidatYeniMiktar').value);
-    if (!miktar || miktar <= 0) { alert('Geçerli bir miktar girin!'); return; }
+    if (isNaN(miktar) || miktar < 0) { alert('Geçerli bir miktar girin!'); return; }
 
     const simdi = serverNow ? new Date(serverNow) : new Date();
     if (!serverNow) return;
-    const ay = simdi.getMonth() + 1; // JS ayları 0-11 olduğu için +1
+    const ay = simdi.getMonth() + 1;
 
     const { error } = await supabaseClient
         .from('aidat_ayarlari')
@@ -1290,6 +1290,53 @@ async function aidatKaydet() {
     aidatGosterGuncelle();
     renderPaymentTable();
     alert(`${AYLAR[ay - 1]} ${yil} aidatı güncellendi!`);
+}
+
+// --- EK ÖDEME İŞLEMLERİ (YENİ EKLENDİ) ---
+function ekOdemeDuzenleAc() {
+    document.getElementById('ekOdemeDuzenleForm').style.display = 'flex';
+    document.getElementById('ekOdemeDuzenleBtn').style.display = 'none';
+
+    const yil = parseInt(document.getElementById('tableYearFilter').value);
+    const simdi = serverNow ? new Date(serverNow) : new Date();
+    const ay = simdi.getMonth() + 1;
+
+    const ayar = aidatAyarlari.find(a => a.yil === yil && a.ay === ay);
+    document.getElementById('ekOdemeYeniMiktar').value = (ayar && ayar.ek_gider) ? ayar.ek_gider : '';
+}
+
+function ekOdemeDuzenleKapat() {
+    document.getElementById('ekOdemeDuzenleForm').style.display = 'none';
+    document.getElementById('ekOdemeDuzenleBtn').style.display = 'inline';
+    document.getElementById('ekOdemeYeniMiktar').value = '';
+}
+
+async function ekOdemeKaydet() {
+    const yil = parseInt(document.getElementById('tableYearFilter').value);
+    const ekGiderMiktar = parseFloat(document.getElementById('ekOdemeYeniMiktar').value) || 0;
+
+    const simdi = serverNow ? new Date(serverNow) : new Date();
+    if (!serverNow) return;
+    const ay = simdi.getMonth() + 1;
+
+    // Mevcut ayın kaydı var mı kontrol edelim
+    const ayar = aidatAyarlari.find(a => a.yil === yil && a.ay === ay);
+    const mevcutMiktar = ayar ? ayar.miktar : 0;
+
+    const { error } = await supabaseClient
+        .from('aidat_ayarlari')
+        .upsert(
+            [{ yil, ay, miktar: mevcutMiktar, ek_gider: ekGiderMiktar }],
+            { onConflict: 'yil,ay' }
+        );
+
+    if (error) { alert('Kayıt hatası: ' + error.message); return; }
+
+    await fetchAidatAyarlari();
+    ekOdemeDuzenleKapat();
+    aidatGosterGuncelle();
+    renderPaymentTable();
+    alert(`${AYLAR[ay - 1]} ${yil} ek ödemesi güncellendi!`);
 }
 
 
