@@ -313,15 +313,10 @@ document.getElementById('ekleBtn').onclick = async () => {
         return;
     }
 
-    const seciliSakin = sakinlerData.find(s => `Daire ${s.daire_no} - ${s.ad_soyad}` === v.sak);
-
     if (!v.t || v.t < 0) {
         alert("Lütfen geçerli bir tutar giriniz!");
         return;
     }
-
-
-    // --- BURADAN SONRASI AYNI (Supabase insert işlemleri) ---
 
     // Daire numarasını ayıkla
     const dNoMatch = v.sak.match(/Daire (\d+)/);
@@ -345,10 +340,32 @@ document.getElementById('ekleBtn').onclick = async () => {
     if (error) {
         alert("Kayıt yapılamadı: " + error.message);
     } else {
-        alert("Kayıt başarılı");
+        alert("Kayıt başarılı!");
+
+        // --- FORMU İLK HALİNE GETİR (SIRTINI TEMİZLE) ---
         document.getElementById('tutar').value = '';
         document.getElementById('detay').value = '';
+        
+        // Kategori Seçimini Sıfırla
+        const katEl = document.getElementById('kategori');
+        if (katEl) katEl.value = '';
+
+        // Ödeme Yapan / Sakin Listesini Sıfırla
+        const sakEl = document.getElementById('sakinSecici');
+        if (sakEl) {
+            sakEl.innerHTML = '';
+            sakEl.add(new Option("İşlem Seçiniz...", ""));
+        }
+
+        // Varsa İpucu Metnini Temizle
+        const ipucuEl = document.getElementById('aidatIpucu');
+        if (ipucuEl) ipucuEl.innerText = '';
+
+        // Tabloyu ve Verileri Yenile
         fetchData();
+
+        document.querySelectorAll('.section-content').forEach(el => el.classList.remove('open'));
+        document.querySelectorAll('.section-header').forEach(el => el.classList.remove('active'));
     }
 };
 
@@ -374,7 +391,9 @@ document.getElementById('sakinKaydetBtn').onclick = async () => {
 };
 
 async function loadSakinlerData() {
-    const { data } = await supabaseClient.from('sakinler').select('*').order('daire_no');
+    // --- const { data } = await supabaseClient.from('sakinler').select('*').order('daire_no');
+    const { data } = await supabaseClient.from('sakinler').select('*').eq('is_active', true).order('daire_no');
+
     sakinlerData = data || [];
 
     const fil = document.getElementById('daireFilter');
@@ -394,7 +413,7 @@ async function loadSakinlerData() {
         const yoneticiStili = isYonetici ? 'border-left: 5px solid #6366f1; background: #f8fafc;' : '';
         const yoneticiRozeti = isYonetici ? '<span style="background:#eef2ff; color:#6366f1; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:10px; border:1px solid #e0e7ff; font-weight:700;">YÖNETİCİ</span>' : '';
 
-        const dblClickAction = isAdmin ? `ondblclick="openSakinModal(${s.id}, '${s.ad_soyad}', ${s.daire_no})"` : '';
+        const dblClickAction = `ondblclick="openSakinModal(${s.id}, '${s.ad_soyad}', ${s.daire_no})"`;
 
         if (list) {
             list.innerHTML += `
@@ -752,18 +771,39 @@ window.saveHareket = async () => {
 window.deleteHareket = async () => { if (confirm("Silinsin mi?")) { await supabaseClient.from('veriler').delete().eq('id', document.getElementById('editHareketId').value); closeModal('hareketModal'); fetchData(); } }
 
 // SAKİN MODAL
-window.openSakinModal = (id, ad, no) => {
-    const s = sakinlerData.find(x => x.id === id); // Sakin verisini bul
+window.openSakinModal = async (id, ad, no) => {
+    const s = sakinlerData.find(x => x.id === id);
     document.getElementById('editSakinId').value = id;
     document.getElementById('editSakinAd').value = ad;
     let formatliNo = no < 10 ? '0' + no : no.toString();
     document.getElementById('editSakinNo').value = formatliNo;
 
-    // Tik kutusunu veritabanındaki duruma göre ayarla
-    document.getElementById('editSakinIsAdmin').checked = s.is_admin || false;
+    if (s) {
+        document.getElementById('editSakinIsAdmin').checked = s.is_admin || false;
+    }
+
+    // 🔒 Supabase üzerinden oturum kontrolü
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const isLoggedIn = !!session; // Oturum varsa true, yoksa false döner
+
+    const adminArea = document.getElementById('sakinAdminFormArea');
+    const publicCloseBtn = document.getElementById('sakinKapatPublicBtn');
+
+    if (isLoggedIn) {
+        // Yönetici Giriş Yapmışsa: Düzenleme Formunu Göster
+        if (adminArea) adminArea.style.display = 'block';
+        if (publicCloseBtn) publicCloseBtn.style.display = 'none';
+    } else {
+        // Giriş Yapılmamışsa: Formu Gizle, Sadece Daire Geçmişini Göster
+        if (adminArea) adminArea.style.display = 'none';
+        if (publicCloseBtn) publicCloseBtn.style.display = 'inline-block';
+    }
 
     document.getElementById('sakinModal').style.display = 'flex';
-}
+
+    // Geçmiş Sakinleri Çek
+    daireGecmisiniGetir(no);
+};
 
 window.saveSakin = async () => {
     const id = document.getElementById('editSakinId').value;
@@ -815,10 +855,68 @@ window.saveSakin = async () => {
     }
 }
 
-window.deleteSakinAction = async () => {
+window.yeniSakinAction = async () => {
     const id = document.getElementById('editSakinId').value;
-    if (confirm("Sakini sil?")) { await supabaseClient.from('sakinler').delete().eq('id', id); closeModal('sakinModal'); await loadSakinlerData(); renderPaymentTable(); }
-}
+    const yeniAd = document.getElementById('editSakinAd').value.trim();
+    const daireNo = document.getElementById('editSakinNo').value;
+
+    if (!yeniAd) {
+        alert("Lütfen yeni sakinin adını yazın!");
+        return;
+    }
+
+    // Sakinler listesinden o anki mevcut (eski) sakini buluyoruz
+    const mevcutSakin = sakinlerData.find(s => s.id == id);
+    if (!mevcutSakin) {
+        alert("Mevcut sakin kaydı bulunamadı!");
+        return;
+    }
+
+    const onay = confirm(`Daire ${daireNo} için kiracı değişimi yapılacaktır.\n\nEski Sakin: "${mevcutSakin.ad_soyad}" (Geçmişe kopyalanacak)\nYeni Sakin: "${yeniAd}" (Aktif yapılacak)\n\nOnaylıyor musunuz?`);
+    if (!onay) return;
+
+    const bugun = new Date().toISOString().split('T')[0];
+
+    // 1. Eski sakinin verilerini geçmiş kaydı (is_active: false) olarak YENİ BİR SATIR şeklinde ekle
+    const { error: insertError } = await supabaseClient
+        .from('sakinler')
+        .insert([{
+            daire_no: daireNo,
+            ad_soyad: mevcutSakin.ad_soyad,
+            is_admin: false,
+            is_active: false,
+            giris_tarihi: mevcutSakin.giris_tarihi || null,
+            cikis_tarihi: bugun
+        }]);
+
+    if (insertError) {
+        alert("Eski sakin geçmişe kopyalanırken hata oluştu: " + insertError.message);
+        return;
+    }
+
+    // 2. Mevcut ana satırı yeni sakinin adıyla güncelle
+    const { error: updateError } = await supabaseClient
+        .from('sakinler')
+        .update({
+            ad_soyad: yeniAd,
+            is_active: true,
+            giris_tarihi: bugun,
+            cikis_tarihi: null
+        })
+        .eq('id', id);
+
+    if (updateError) {
+        alert("Yeni sakin güncellenirken hata oluştu: " + updateError.message);
+        return;
+    }
+
+    alert("Yeni sakin başarıyla kaydedildi!");
+    closeModal('sakinModal');
+
+    // Verileri yeniden yükle
+    await loadSakinlerData();
+    if (typeof renderPaymentTable === 'function') renderPaymentTable();
+};
 
 window.closeModal = (m) => document.getElementById(m).style.display = 'none';
 
@@ -1011,8 +1109,7 @@ function modalSakinleriGuncelle(selectedValue = null) {
 
 
 
-document.getElementById('editHareketKategori')
-    .addEventListener('change', () => modalSakinleriGuncelle());
+document.getElementById('editHareketKategori').addEventListener('change', () => modalSakinleriGuncelle());
 
 
 
@@ -1339,6 +1436,60 @@ async function ekOdemeKaydet() {
     alert(`${AYLAR[ay - 1]} ${yil} ek ödemesi güncellendi!`);
 }
 
+// Daireye ait eski (pasif) sakinleri Supabase'den çekip listeleyen fonksiyon
+async function daireGecmisiniGetir(daireNo) {
+    const container = document.getElementById('daireGecmisiListesi');
+    if (!container) return;
+
+    container.innerHTML = '<span style="color:#94a3b8;">Yükleniyor...</span>';
+
+    // Daire numarasını veritabanındaki formata (01, 02 vb.) uyduruyoruz
+    const arananNo = Number(daireNo) < 10 ? '0' + Number(daireNo) : daireNo.toString();
+
+    // Hem metin hem sayı ihtimaline karşı sorguluyoruz
+    const { data, error } = await supabaseClient
+        .from('sakinler')
+        .select('*')
+        .or(`daire_no.eq.${arananNo},daire_no.eq.${Number(daireNo)}`)
+        .eq('is_active', false)
+        .order('cikis_tarihi', { ascending: false });
+
+    if (error || !data || data.length === 0) {
+        container.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:6px;">...</div>';
+        return;
+    }
+
+    let html = '<ul style="list-style:none; padding:0; margin:0;">';
+    
+    data.forEach(s => {
+        const giris = s.giris_tarihi ? new Date(s.giris_tarihi).toLocaleDateString('tr-TR') : '...';
+        const cikis = s.cikis_tarihi ? new Date(s.cikis_tarihi).toLocaleDateString('tr-TR') : '...';
+
+        html += `
+            <li style="padding:5px 0; border-bottom:1px dashed #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:600; color:#334155;">${s.ad_soyad || '...'}</span>
+                <span style="color:#64748b; font-size:11px;">📅 ${giris} — ${cikis}</span>
+            </li>
+        `;
+    });
+
+    html += '</ul>';
+    container.innerHTML = html;
+}
+
+
+// --- SAYFA AÇILDIĞINDA İLK BURA ÇALIŞIR ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Sayfa açılır açılmaz direkt Ödeme Tablosu sekmesine geç
+    if (typeof showTab === 'function') {
+        showTab('odeme-tablosu');
+    }
+    
+    // Verileri yükle
+    if (typeof fetchData === 'function') {
+        fetchData();
+    }
+});
 
 logUserAccess();
 
