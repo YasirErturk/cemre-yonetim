@@ -11,6 +11,7 @@
     window.supabaseClient = supabase[_0xFUNC](_0xURL, _0xKEY);
 })();
 
+supabaseClient.from('veriler').select('id').limit(1);
 
 const SESSION_TIME = 10 * 60;
 let remainingTime = SESSION_TIME, countdownInterval, rawData = [], sakinlerData = [], currentUserEmail = 'Bilinmiyor';
