@@ -22,7 +22,7 @@ IMAP_SERVER = "imap.gmail.com"
 SUPABASE_URL = "https://daruffqlidfrhbwswopn.supabase.co"
 SUPABASE_KEY = "sb_publishable_8CQ-97MUtgaTGkgOo2xFcg_3ZijKORD"
 
-# Linux / Ubuntu için profil dizini (Otomatik kullanıcı ana klasöründe oluşur)
+# Linux / Ubuntu için profil dizini
 BOT_PROFILE_PATH = os.path.expanduser("~/whatsapp_bot_profile")
 
 # Supabase İstemcisi
@@ -54,6 +54,9 @@ def whatsapp_mesaj_gonder_selenium(telefon, mesaj):
     url = f"https://web.whatsapp.com/send?phone={temiz_tel}&text={encoded_mesaj}"
 
     options = Options()
+    # Ubuntu üzerindeki Chrome binary konumu
+    options.binary_location = "/usr/bin/google-chrome"
+    
     options.add_argument(f"--user-data-dir={BOT_PROFILE_PATH}")
     options.add_argument("--headless=new")
     options.add_argument("--window-size=1920,1080")
@@ -186,7 +189,7 @@ def banka_maillerini_kontrol_et():
         print(f"❌ Mail Kontrol Hatası: {e}")
 
 
-# --- 3. DÖNGÜ ---
+# --- 3. ANA DÖNGÜ ---
 if __name__ == "__main__":
     print("🚀 Cemre Apt. Otomasyon Sistemi Başlatıldı.")
     print("📬 Banka mailleri 15 saniyede bir kontrol edilecek...\n")
