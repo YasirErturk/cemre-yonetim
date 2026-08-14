@@ -3,6 +3,7 @@ import email
 from email.header import decode_header
 import time
 import re
+import os
 import urllib.parse
 from supabase import create_client, Client
 
@@ -21,8 +22,8 @@ IMAP_SERVER = "imap.gmail.com"
 SUPABASE_URL = "https://daruffqlidfrhbwswopn.supabase.co"
 SUPABASE_KEY = "sb_publishable_8CQ-97MUtgaTGkgOo2xFcg_3ZijKORD"
 
-# Otomasyona özel bağımsız Chrome profil dizini
-BOT_PROFILE_PATH = r"C:\Users\PRJ-2\AppData\Local\Google\Chrome\User Data\WhatsApp_Bot_Profile"
+# Linux / Ubuntu için profil dizini (Otomatik kullanıcı ana klasöründe oluşur)
+BOT_PROFILE_PATH = os.path.expanduser("~/whatsapp_bot_profile")
 
 # Supabase İstemcisi
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -43,7 +44,7 @@ def telefon_temizle(tel):
 
 
 def whatsapp_mesaj_gonder_selenium(telefon, mesaj):
-    """WhatsApp Web üzerinden arka planda görünmez (Headless) olarak mesaj gönderir."""
+    """WhatsApp Web üzerinden mesaj gönderir."""
     temiz_tel = telefon_temizle(telefon)
     if not temiz_tel:
         print("⚠️ Geçersiz telefon numarası, WhatsApp mesajı gönderilemedi.")
@@ -56,23 +57,25 @@ def whatsapp_mesaj_gonder_selenium(telefon, mesaj):
     options.add_argument(f"--user-data-dir={BOT_PROFILE_PATH}")
     options.add_argument("--headless=new")
     options.add_argument("--window-size=1920,1080")
-    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
     driver = None
     try:
-        print(f"🤖 WhatsApp botu arka planda {temiz_tel} için çalıştırılıyor...")
+        print(f"🤖 WhatsApp botu {temiz_tel} için çalıştırılıyor...")
         driver = webdriver.Chrome(options=options)
         driver.get(url)
 
-        wait = WebDriverWait(driver, 30)
+        wait = WebDriverWait(driver, 35)
+        # Mesaj kutusunun yüklenmesini bekle
         msg_box = wait.until(
             EC.presence_of_element_located((By.XPATH, '//div[@contenteditable="true"][@data-tab="10"]'))
         )
-        time.sleep(1)
+        time.sleep(2)
         msg_box.send_keys(Keys.ENTER)
-        print(f"✅ Mesaj arka planda başarıyla gönderildi -> {temiz_tel}")
+        print(f"✅ Mesaj başarıyla gönderildi -> {temiz_tel}")
         time.sleep(3)
         return True
 
@@ -105,8 +108,7 @@ def mail_icerigini_al(msg):
 
 
 def tutar_ayikla(mail_icerigi):
-    """Mail içeriğinden ödenen tutarı çekmeye çalışır (örn: 850₺, 1500 TL, 1.500,00 TL)."""
-    # 850₺ veya 850 TL veya 850.00 TL benzeri kalıpları yakalar
+    """Mail içeriğinden ödenen tutarı çekmeye çalışır."""
     match = re.search(r'(\d+[\d\.,]*)\s*(?:₺|TL|TRY|tl)', mail_icerigi)
     if match:
         tutar_str = match.group(1).replace('.', '').replace(',', '.')
@@ -121,7 +123,6 @@ def islem_yap(mail_icerigi):
     """Mail içeriğindeki sakini tespit eder ve WhatsApp mesajı gönderir."""
     print("🔎 Mail içeriği analiz ediliyor...")
 
-    # Supabase'den sakin listesini çek (sadece isim ve telefon eşleştirmesi için)
     res = supabase.table("sakinler").select("*").execute()
     sakinler = res.data if res.data else []
 
@@ -137,34 +138,29 @@ def islem_yap(mail_icerigi):
 
         telefon = bulunan_sakin.get("telefon")
         if not telefon:
-            print(f"⚠️ {bulunan_sakin['ad_soyad']} için telefon numarası eksik, mesaj gönderilemedi.")
+            print(f"⚠️ {bulunan_sakin['ad_soyad']} için telefon numarası eksik.")
             return
 
-        # Mailden tutarı çek
         odenen_tutar_metni = tutar_ayikla(mail_icerigi)
 
-        # WhatsApp Mesaj Metni
         mesaj = (
             f"Sayın {bulunan_sakin['ad_soyad']},\n\n"
             f"{odenen_tutar_metni} tutarındaki ödemeniz alınmıştır. Teşekkür ederiz.\n\n"
             f"Cemre Apt. Yönetimi"
         )
 
-        # Selenium ile WhatsApp Bildirimi Gönder
         whatsapp_mesaj_gonder_selenium(telefon, mesaj)
-
     else:
         print("❓ Mail içeriğinde veritabanındaki sakin adlarıyla eşleşen bir isim bulunamadı.")
 
 
 def banka_maillerini_kontrol_et():
-    """Okunmamış banka/bildirim maillerini kontrol eder."""
+    """Okunmamış banka maillerini kontrol eder."""
     try:
         mail = imaplib.IMAP4_SSL(IMAP_SERVER)
         mail.login(EMAIL_USER, EMAIL_PASS)
         mail.select("inbox")
 
-        # Sadece OKUNMAMIŞ (UNSEEN) mailleri arar
         status, response = mail.search(None, 'UNSEEN')
         mail_ids = response[0].split()
 
