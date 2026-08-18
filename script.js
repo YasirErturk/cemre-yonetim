@@ -338,36 +338,62 @@ document.getElementById('ekleBtn').onclick = async () => {
         }])
         .select();
 
-    if (error) {
-        alert("Kayıt yapılamadı: " + error.message);
-    } else {
-        alert("Kayıt başarılı!");
-
-        // --- FORMU İLK HALİNE GETİR (SIRTINI TEMİZLE) ---
-        document.getElementById('tutar').value = '';
-        document.getElementById('detay').value = '';
-        
-        // Kategori Seçimini Sıfırla
-        const katEl = document.getElementById('kategori');
-        if (katEl) katEl.value = '';
-
-        // Ödeme Yapan / Sakin Listesini Sıfırla
-        const sakEl = document.getElementById('sakinSecici');
-        if (sakEl) {
-            sakEl.innerHTML = '';
-            sakEl.add(new Option("İşlem Seçiniz...", ""));
+        if (error) {
+            alert("Kayıt yapılamadı: " + error.message);
+        } else {
+            const katVal = document.getElementById('kategori')?.value;
+            const tutarVal = document.getElementById('tutar')?.value;
+            const detayVal = document.getElementById('detay')?.value;
+            const tarihVal = document.getElementById('islemTarihi')?.value || new Date().toLocaleDateString('tr-TR');
+            
+            const sakEl = document.getElementById('sakinSecici');
+            const seciliSakinId = sakEl?.value;
+            const seciliDaireMetni = sakEl?.options[sakEl?.selectedIndex]?.text || '';
+    
+            if (katVal === "Aidat" && seciliSakinId) {
+                const sakinSonDurum = await sakinBorcDus(seciliSakinId, tutarVal);
+    
+                if (sakinSonDurum) {
+                    const waOnay = confirm("Kayıt başarıyla eklendi!\n\nSakin için WhatsApp üzerinden bilgilendirme mesajı gönderilsin mi?");
+    
+                    if (waOnay) {
+                        whatsappMesajGonder({
+                            adSoyad: sakinSonDurum.ad_soyad,
+                            daireNo: seciliDaireMetni,
+                            tarih: tarihVal,
+                            tutar: tutarVal,
+                            detay: detayVal || "Aidat Ödemesi",
+                            kalanBorc: sakinSonDurum.guncelBorc,
+                            telefon: sakinSonDurum.telefon
+                        });
+                    }
+                } else {
+                    alert("Kayıt başarılı!");
+                }
+            } else {
+                alert("Kayıt başarılı!");
+            }
+    
+            // --- FORMU İLK HALİNE GETİR (SIRTINI TEMİZLE) ---
+            document.getElementById('tutar').value = '';
+            document.getElementById('detay').value = '';
+            
+            const katEl = document.getElementById('kategori');
+            if (katEl) katEl.value = '';
+    
+            if (sakEl) {
+                sakEl.innerHTML = '';
+                sakEl.add(new Option("İşlem Seçiniz...", ""));
+            }
+    
+            const ipucuEl = document.getElementById('aidatIpucu');
+            if (ipucuEl) ipucuEl.innerText = '';
+    
+            fetchData();
+    
+            document.querySelectorAll('.section-content').forEach(el => el.classList.remove('open'));
+            document.querySelectorAll('.section-header').forEach(el => el.classList.remove('active'));
         }
-
-        // Varsa İpucu Metnini Temizle
-        const ipucuEl = document.getElementById('aidatIpucu');
-        if (ipucuEl) ipucuEl.innerText = '';
-
-        // Tabloyu ve Verileri Yenile
-        fetchData();
-
-        document.querySelectorAll('.section-content').forEach(el => el.classList.remove('open'));
-        document.querySelectorAll('.section-header').forEach(el => el.classList.remove('active'));
-    }
 };
 
 
@@ -781,6 +807,8 @@ window.openSakinModal = async (id, ad, no) => {
 
     if (s) {
         document.getElementById('editSakinIsAdmin').checked = s.is_admin || false;
+        const telEl = document.getElementById('editSakinTel');
+        if (telEl) telEl.value = s.telefon || '';
     }
 
     // 🔒 Supabase üzerinden oturum kontrolü
@@ -811,6 +839,7 @@ window.saveSakin = async () => {
     const ad = document.getElementById('editSakinAd').value;
     const no = document.getElementById('editSakinNo').value;
     const isAdmin = document.getElementById('editSakinIsAdmin').checked;
+    const tel = document.getElementById('editSakinTel')?.value || '';
 
     if (ad && no) {
         // EĞER BU KİŞİ YÖNETİCİ OLARAK KAYDEDİLECEKSE
@@ -824,13 +853,14 @@ window.saveSakin = async () => {
 
         // Şimdi asıl kişiyi güncelle
         const { error } = await supabaseClient
-            .from('sakinler')
-            .update({
-                ad_soyad: ad,
-                daire_no: no,
-                is_admin: isAdmin
-            })
-            .eq('id', id);
+        .from('sakinler')
+        .update({
+            ad_soyad: ad,
+            daire_no: no,
+            is_admin: isAdmin,
+            telefon: tel
+        })
+        .eq('id', id);
 
         if (error) {
             alert("Hata: " + error.message);
@@ -860,13 +890,13 @@ window.yeniSakinAction = async () => {
     const id = document.getElementById('editSakinId').value;
     const yeniAd = document.getElementById('editSakinAd').value.trim();
     const daireNo = document.getElementById('editSakinNo').value;
+    const yeniTel = document.getElementById('editSakinTel').value.trim(); // Yeni sakinin telefonu
 
     if (!yeniAd) {
         alert("Lütfen yeni sakinin adını yazın!");
         return;
     }
 
-    // Sakinler listesinden o anki mevcut (eski) sakini buluyoruz
     const mevcutSakin = sakinlerData.find(s => s.id == id);
     if (!mevcutSakin) {
         alert("Mevcut sakin kaydı bulunamadı!");
@@ -878,7 +908,7 @@ window.yeniSakinAction = async () => {
 
     const bugun = new Date().toISOString().split('T')[0];
 
-    // 1. Eski sakinin verilerini geçmiş kaydı (is_active: false) olarak YENİ BİR SATIR şeklinde ekle
+    // 1. Eski sakinin verilerini geçmişe kopyala (Telefon: mevcutSakin.telefon)
     const { error: insertError } = await supabaseClient
         .from('sakinler')
         .insert([{
@@ -886,6 +916,7 @@ window.yeniSakinAction = async () => {
             ad_soyad: mevcutSakin.ad_soyad,
             is_admin: false,
             is_active: false,
+            telefon: mevcutSakin.telefon || null, // <-- DÜZELTİLDİ: Eski sakinin mevcut telefonu aktarılıyor
             giris_tarihi: mevcutSakin.giris_tarihi || null,
             cikis_tarihi: bugun
         }]);
@@ -895,11 +926,12 @@ window.yeniSakinAction = async () => {
         return;
     }
 
-    // 2. Mevcut ana satırı yeni sakinin adıyla güncelle
+    // 2. Mevcut ana satırı YENİ sakinin adıyla ve telefonuyla güncelle
     const { error: updateError } = await supabaseClient
         .from('sakinler')
         .update({
             ad_soyad: yeniAd,
+            telefon: yeniTel, // <-- YENİ SAKİNİN TELEFONU
             is_active: true,
             giris_tarihi: bugun,
             cikis_tarihi: null
@@ -914,7 +946,6 @@ window.yeniSakinAction = async () => {
     alert("Yeni sakin başarıyla kaydedildi!");
     closeModal('sakinModal');
 
-    // Verileri yeniden yükle
     await loadSakinlerData();
     if (typeof renderPaymentTable === 'function') renderPaymentTable();
 };
@@ -1383,6 +1414,7 @@ async function aidatKaydet() {
 
     if (error) { alert('Kayıt hatası: ' + error.message); return; }
 
+    await aktifSakinlereBorcEkle(miktar); // Aktif sakinlerin borcuna aidat eklendi
     await fetchAidatAyarlari();
     aidatDuzenleKapat();
     aidatGosterGuncelle();
@@ -1430,6 +1462,7 @@ async function ekOdemeKaydet() {
 
     if (error) { alert('Kayıt hatası: ' + error.message); return; }
 
+    await aktifSakinlereBorcEkle(ekGiderMiktar); // Aktif sakinlerin borcuna ek ödeme eklendi
     await fetchAidatAyarlari();
     ekOdemeDuzenleKapat();
     aidatGosterGuncelle();
@@ -1477,8 +1510,6 @@ async function daireGecmisiniGetir(daireNo) {
     html += '</ul>';
     container.innerHTML = html;
 }
-
-
 // --- SAYFA AÇILDIĞINDA İLK BURA ÇALIŞIR ---
 document.addEventListener('DOMContentLoaded', () => {
     // Sayfa açılır açılmaz direkt Ödeme Tablosu sekmesine geç
@@ -1491,6 +1522,118 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchData();
     }
 });
+
+// Aktif tüm sakinlerin borcuna tutar ekler
+async function aktifSakinlereBorcEkle(eklenecekTutar) {
+    if (!eklenecekTutar || eklenecekTutar <= 0) return;
+
+    const { data: aktifSakinler, error: fetchErr } = await supabaseClient
+        .from('sakinler')
+        .select('id, borc')
+        .eq('is_active', true);
+
+    if (fetchErr) {
+        console.error("Sakinler çekilemedi:", fetchErr.message);
+        return;
+    }
+
+    for (const sakin of aktifSakinler) {
+        const yeniBorc = Number(sakin.borc || 0) + Number(eklenecekTutar);
+        await supabaseClient
+            .from('sakinler')
+            .update({ borc: yeniBorc })
+            .eq('id', sakin.id);
+    }
+}
+
+// Telefon numarasını WhatsApp formatına uygun hale getirir (905XXXXXXXXX)
+function telefonFormatla(tel) {
+    if (!tel) return '';
+    let temiz = tel.replace(/\D/g, ''); // Sadece rakamları al
+    if (temiz.startsWith('0')) temiz = temiz.substring(1); // Baştaki 0'ı kaldır
+    if (!temiz.startsWith('90')) temiz = '90' + temiz; // Ülke kodunu ekle
+    return temiz;
+}
+
+// WhatsApp yönlendirmesini açar (Bozulmayan Evrensel Emoji Kodlarıyla)
+function whatsappMesajGonder({ adSoyad, daireNo, tarih, tutar, detay, kalanBorc, telefon }) {
+    const temizTel = telefonFormatla(telefon);
+    
+    if (!temizTel) {
+        alert("Bu sakine ait geçerli bir telefon numarası bulunamadı!");
+        return;
+    }
+
+    // Daire bilgisini temizle (Sadece "Daire 03" kısmını alır)
+    let temizDaire = (daireNo || '').split('-')[0].trim();
+
+    // Borç hesabı ve simge seçimi
+    const borcSayisi = Number(kalanBorc || 0);
+    
+    // Saf ASCII kaçış kodları: \u2705 (Yeşil Onay), \uD83D\uDCCD (Pin İğne)
+    const simge = borcSayisi <= 0 ? '\u2705' : '\uD83D\uDCCD';
+    const borcMetni = borcSayisi <= 0 
+        ? '*Güncel Kalan Borcunuz:* 0 TL (Borcunuz yoktur)' 
+        : `*Güncel Kalan Borcunuz:* ${borcSayisi} TL`;
+
+    // Mesaj Metni
+    const mesaj = `Sayın *${adSoyad}* (${temizDaire}),\n` +
+                  `*${tarih}* tarihinde *${tutar} TL* tutarındaki ödemeniz alınmıştır.\n\n` +
+                  `${simge} ${borcMetni}\n` +
+                  `Teşekkür ederiz.`;
+
+    const url = `https://api.whatsapp.com/send?phone=${temizTel}&text=${encodeURIComponent(mesaj)}`;
+    window.open(url, '_blank');
+}
+
+
+// Sakin ödeme yaptığında borcundan düşer (Eksi borç / fazla ödeme destekli)
+async function sakinBorcDus(sakinIdentifier, odenenTutar) {
+    if (!sakinIdentifier) return null;
+
+    let sakin = null;
+
+    // 1. Sayısal ID ise doğrudan ID ile dene
+    if (!isNaN(sakinIdentifier) && !isNaN(parseFloat(sakinIdentifier))) {
+        const { data } = await supabaseClient
+            .from('sakinler')
+            .select('id, borc, telefon, ad_soyad, daire_no')
+            .eq('id', sakinIdentifier)
+            .maybeSingle();
+        sakin = data;
+    }
+
+    // 2. Metin ise ad/daire eşleştir
+    if (!sakin) {
+        const { data: tumSakinler } = await supabaseClient
+            .from('sakinler')
+            .select('id, borc, telefon, ad_soyad, daire_no')
+            .eq('is_active', true);
+
+        if (tumSakinler) {
+            sakin = tumSakinler.find(s => 
+                (s.ad_soyad && sakinIdentifier.toLowerCase().includes(s.ad_soyad.toLowerCase())) ||
+                (s.daire_no && sakinIdentifier.includes(String(s.daire_no)))
+            );
+        }
+    }
+
+    if (!sakin) {
+        console.error("Sakin veritabanında bulunamadı:", sakinIdentifier);
+        return null;
+    }
+
+    // Math.max kaldırıldı: Borç eksiye düşebilir (Alacaklı / Fazla ödeme)
+    const guncelBorc = Number(sakin.borc || 0) - Number(odenenTutar);
+
+    await supabaseClient
+        .from('sakinler')
+        .update({ borc: guncelBorc })
+        .eq('id', sakin.id);
+
+    return { ...sakin, guncelBorc };
+}
+
 
 logUserAccess();
 
