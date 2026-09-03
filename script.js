@@ -103,6 +103,7 @@ async function checkSession() {
     await fetchAidatAyarlari();
     await loadSakinlerData();
     await fetchData();
+    renderPaymentTable();
 
     const currentHash = window.location.hash.replace('#', '');
     if (['kayitlar', 'sakinler', 'odeme-tablosu'].includes(currentHash)) {
@@ -159,6 +160,8 @@ async function fetchData() {
 
     rawData = data || [];
     listeleVeriler();
+    // Ödeme tablosundaki ay hücreleriyle birlikte Supabase'den gelen borç sütununu da yenile.
+    if (typeof renderPaymentTable === 'function') renderPaymentTable();
 }
 
 window.listeleVeriler = () => {
@@ -493,10 +496,29 @@ function calcKarliHavuz(daireNo, yilInt) {
 }
 
 
+function bakiyeGosteriminiHazirla(borcDegeri) {
+    const borc = Number(borcDegeri);
+    const kalanBorc = Number.isFinite(borc) ? borc : 0;
+    const bakiye = -kalanBorc;
+    const mutlakTutar = Math.abs(bakiye).toLocaleString('tr-TR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    });
+
+    const isaretliTutar = bakiye > 0
+        ? `(+)${mutlakTutar}`
+        : bakiye < 0
+            ? `(-)${mutlakTutar}`
+            : '0';
+
+    return { kalanBorc, bakiye, metin: `${isaretliTutar} TL` };
+}
+
 function renderPaymentTable() {
     const yil = document.getElementById('tableYearFilter').value;
     const thead = document.getElementById('tableHead'), tbody = document.getElementById('tableBody');
     const yilInt = parseInt(yil);
+    const adminGirisYapmis = document.getElementById('timerDisplay')?.style.display === 'flex';
     thead.innerHTML = `<tr><th>Daire</th>${AYLAR.map((a, i) => {
         const ayNo = i + 1;
         const ayar = aidatAyarlari.find(x => x.yil === yilInt && x.ay === ayNo);
@@ -511,7 +533,7 @@ function renderPaymentTable() {
                </div>`
             : '<div style="height:34px;"></div>';
         return `<th>${a}${miktar}</th>`;
-    }).join('')}</tr>`;
+    }).join('')}<th class="debt-header">Bakiye</th></tr>`;
     tbody.innerHTML = '';
     // renderPaymentTable fonksiyonunun içine, sakinlerData.forEach döngüsünün başladığı yere...
     sakinlerData.forEach(s => {
@@ -709,6 +731,26 @@ function renderPaymentTable() {
             }
         }
 
+        // Borç bilgisi sakinler tablosundan (s.borc) okunur ve satırın en sonunda gösterilir.
+        const borc = Number(s.borc);
+        const kalanBorc = Number.isFinite(borc) ? borc : 0;
+        // Supabase'de pozitif borc borcu, negatif borc fazla ödemeyi tutar.
+        // Kullanıcı arayüzünde bakiye mantığıyla gösteriyoruz:
+        // borç = (-), fazla ödeme/alacak = (+).
+        const bakiyeBilgisi = bakiyeGosteriminiHazirla(kalanBorc);
+        const bildirButonu = adminGirisYapmis
+            ? `<button type="button" class="debt-notify-btn" onclick="event.stopPropagation(); whatsappBakiyeBildir(${s.id})">Bildir</button>`
+            : '';
+        const debtCellContentClass = adminGirisYapmis
+            ? 'debt-cell-content'
+            : 'debt-cell-content debt-cell-content-public';
+        const borcHucre = kalanBorc > 0
+            ? `<td class="debt-cell debt-cell-unpaid"><div class="${debtCellContentClass}"><strong>${bakiyeBilgisi.metin}</strong>${bildirButonu}</div></td>`
+            : kalanBorc < 0
+                ? `<td class="debt-cell debt-cell-credit"><div class="${debtCellContentClass}"><strong>${bakiyeBilgisi.metin}</strong>${bildirButonu}</div></td>`
+                : `<td class="debt-cell debt-cell-paid"><div class="${debtCellContentClass}"><strong>0 TL</strong>${bildirButonu}</div></td>`;
+
+        r += borcHucre;
         tbody.innerHTML += r + `</tr>`;
     });
     aidatGosterGuncelle();
@@ -1414,8 +1456,9 @@ async function aidatKaydet() {
 
     if (error) { alert('Kayıt hatası: ' + error.message); return; }
 
-    await aktifSakinlereBorcEkle(miktar); // Aktif sakinlerin borcuna aidat eklendi
+    // Yeni aidat atanırken yönetici daireye temel aidat borcu eklenmez.
     await fetchAidatAyarlari();
+    await aktifSakinlereBorcEkle(miktar, yil, ay, true);
     aidatDuzenleKapat();
     aidatGosterGuncelle();
     renderPaymentTable();
@@ -1462,7 +1505,8 @@ async function ekOdemeKaydet() {
 
     if (error) { alert('Kayıt hatası: ' + error.message); return; }
 
-    await aktifSakinlereBorcEkle(ekGiderMiktar); // Aktif sakinlerin borcuna ek ödeme eklendi
+    // Ek ödeme, mevcut mantıktaki gibi yönetici dahil sakinlere eklenir.
+    await aktifSakinlereBorcEkle(ekGiderMiktar, yil, ay, false);
     await fetchAidatAyarlari();
     ekOdemeDuzenleKapat();
     aidatGosterGuncelle();
@@ -1498,11 +1542,15 @@ async function daireGecmisiniGetir(daireNo) {
     data.forEach(s => {
         const giris = s.giris_tarihi ? new Date(s.giris_tarihi).toLocaleDateString('tr-TR') : '...';
         const cikis = s.cikis_tarihi ? new Date(s.cikis_tarihi).toLocaleDateString('tr-TR') : '...';
+        const telefon = s.telefon || 'Telefon kayıtlı değil';
 
         html += `
-            <li style="padding:5px 0; border-bottom:1px dashed #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:600; color:#334155;">${s.ad_soyad || '...'}</span>
-                <span style="color:#64748b; font-size:11px;">📅 ${giris} — ${cikis}</span>
+            <li style="padding:7px 0; border-bottom:1px dashed #e2e8f0; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <span style="display:flex; flex-direction:column; gap:2px; min-width:0;">
+                    <span style="font-weight:600; color:#334155;">${s.ad_soyad || '...'}</span>
+                    <span style="color:#64748b; font-size:11px;">📞 ${telefon}</span>
+                </span>
+                <span style="color:#64748b; font-size:11px; text-align:right; white-space:nowrap;">📅 ${giris} — ${cikis}</span>
             </li>
         `;
     });
@@ -1523,13 +1571,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Aktif tüm sakinlerin borcuna tutar ekler
-async function aktifSakinlereBorcEkle(eklenecekTutar) {
+// Aktif tüm sakinlerin borcuna tutar ekler.
+// Yalnızca temel aidat eklenirken yönetici daire muaf tutulur.
+async function aktifSakinlereBorcEkle(eklenecekTutar, yil = null, ay = null, yoneticiMuaf = false) {
     if (!eklenecekTutar || eklenecekTutar <= 0) return;
 
     const { data: aktifSakinler, error: fetchErr } = await supabaseClient
         .from('sakinler')
-        .select('id, borc')
+        .select('id, borc, daire_no, is_admin')
         .eq('is_active', true);
 
     if (fetchErr) {
@@ -1537,12 +1586,37 @@ async function aktifSakinlereBorcEkle(eklenecekTutar) {
         return;
     }
 
+    let yoneticiDaire = null;
+    if (yoneticiMuaf && yil !== null && ay !== null) {
+        const yilNo = Number(yil);
+        const ayNo = Number(ay);
+        const sonYonetici = [...aidatAyarlari]
+            .filter(a => a.yonetici_daire && (
+                Number(a.yil) < yilNo ||
+                (Number(a.yil) === yilNo && Number(a.ay) <= ayNo)
+            ))
+            .sort((a, b) => Number(a.yil) !== Number(b.yil)
+                ? Number(b.yil) - Number(a.yil)
+                : Number(b.ay) - Number(a.ay))[0];
+        const yoneticiSakin = aktifSakinler.find(s => s.is_admin === true);
+        yoneticiDaire = sonYonetici?.yonetici_daire ?? yoneticiSakin?.daire_no ?? null;
+    }
+
     for (const sakin of aktifSakinler) {
+        if (yoneticiDaire !== null && Number(sakin.daire_no) === Number(yoneticiDaire)) {
+            continue;
+        }
+
         const yeniBorc = Number(sakin.borc || 0) + Number(eklenecekTutar);
-        await supabaseClient
+        const { error: updateErr } = await supabaseClient
             .from('sakinler')
             .update({ borc: yeniBorc })
             .eq('id', sakin.id);
+
+        if (!updateErr) {
+            const localSakin = sakinlerData.find(s => s.id === sakin.id);
+            if (localSakin) localSakin.borc = yeniBorc;
+        }
     }
 }
 
@@ -1554,6 +1628,9 @@ function telefonFormatla(tel) {
     if (!temiz.startsWith('90')) temiz = '90' + temiz; // Ülke kodunu ekle
     return temiz;
 }
+
+// WhatsApp'ta satır içi kod biçiminde gösterilecek otomatik bilgilendirme notu.
+const WHATSAPP_BILGILENDIRME_NOTU = '`Bilgilendirme mesajıdır; otomatik olarak gönderilmektedir. Oluşabilecek hesaplama veya veri hatalarından Cemre Apartmanı Yönetimi sorumlu değildir.`';
 
 // WhatsApp yönlendirmesini açar (Bozulmayan Evrensel Emoji Kodlarıyla)
 function whatsappMesajGonder({ adSoyad, daireNo, tarih, tutar, detay, kalanBorc, telefon }) {
@@ -1567,25 +1644,74 @@ function whatsappMesajGonder({ adSoyad, daireNo, tarih, tutar, detay, kalanBorc,
     // Daire bilgisini temizle (Sadece "Daire 03" kısmını alır)
     let temizDaire = (daireNo || '').split('-')[0].trim();
 
-    // Borç hesabı ve simge seçimi
+    // Ödeme sonrası borç durumu: borc pozitifse borç, negatifse fazla ödeme/alacak demektir.
     const borcSayisi = Number(kalanBorc || 0);
-    
+    const borcMutlakTutar = Math.abs(borcSayisi).toLocaleString('tr-TR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    });
+
     // Saf ASCII kaçış kodları: \u2705 (Yeşil Onay), \uD83D\uDCCD (Pin İğne)
-    const simge = borcSayisi <= 0 ? '\u2705' : '\uD83D\uDCCD';
-    const borcMetni = borcSayisi <= 0 
-        ? '*Güncel Kalan Borcunuz:* 0 TL (Borcunuz yoktur)' 
-        : `*Güncel Kalan Borcunuz:* ${borcSayisi} TL`;
+    const simge = borcSayisi > 0 ? '\uD83D\uDCCD' : '\u2705';
+    const borcMetni = borcSayisi > 0
+        ? `Güncel aidat borç bakiyeniz: *${borcMutlakTutar} TL*.`
+        : borcSayisi < 0
+            ? `Güncel aidat alacak bakiyeniz: *${borcMutlakTutar} TL*.`
+            : 'Güncel aidat borç bakiyeniz: *0 TL*.';
 
     // Mesaj Metni
     const mesaj = `Sayın *${adSoyad}* (${temizDaire}),\n` +
                   `*${tarih}* tarihinde *${tutar} TL* tutarındaki ödemeniz alınmıştır.\n\n` +
-                  `${simge} ${borcMetni}\n` +
-                  `Teşekkür ederiz.`;
+                  `${simge} ${borcMetni}\n\n` +
+                  `Teşekkür ederiz.\n` +
+                  `Cemre Apartmanı Yönetimi\n\n` +
+                  WHATSAPP_BILGILENDIRME_NOTU;
 
     const url = `https://api.whatsapp.com/send?phone=${temizTel}&text=${encodeURIComponent(mesaj)}`;
     window.open(url, '_blank');
 }
 
+
+// Ödeme tablosundaki Bakiye hücresinden WhatsApp ile güncel bakiyeyi bildirir.
+window.whatsappBakiyeBildir = async (sakinId) => {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+        alert('Bu işlem için yönetici girişi gereklidir.');
+        return;
+    }
+
+    const sakin = sakinlerData.find(s => s.id == sakinId);
+
+    if (!sakin) {
+        alert('Sakin bilgisi bulunamadı.');
+        return;
+    }
+
+    const temizTel = telefonFormatla(sakin.telefon);
+    if (!temizTel) {
+        alert('Bu sakine ait geçerli bir telefon numarası bulunamadı!');
+        return;
+    }
+
+    const bakiyeBilgisi = bakiyeGosteriminiHazirla(sakin.borc);
+    const bakiyeMutlakTutar = Math.abs(bakiyeBilgisi.bakiye).toLocaleString('tr-TR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    });
+    const bakiyeMesaji = bakiyeBilgisi.bakiye < 0
+        ? `Güncel aidat borç bakiyeniz: *${bakiyeMutlakTutar} TL*.`
+        : bakiyeBilgisi.bakiye > 0
+            ? `Güncel aidat alacak bakiyeniz: *${bakiyeMutlakTutar} TL*.`
+            : 'Güncel aidat borç bakiyeniz: *0 TL*.';
+    const daire = `Daire ${sakin.daire_no}`;
+    const mesaj = `Sayın *${sakin.ad_soyad}* (${daire}),\n\n` +
+        `${bakiyeMesaji}\n\n` +
+        `Cemre Apartmanı Yönetimi\n\n` +
+        WHATSAPP_BILGILENDIRME_NOTU;
+
+    const url = `https://api.whatsapp.com/send?phone=${temizTel}&text=${encodeURIComponent(mesaj)}`;
+    window.open(url, '_blank');
+};
 
 // Sakin ödeme yaptığında borcundan düşer (Eksi borç / fazla ödeme destekli)
 async function sakinBorcDus(sakinIdentifier, odenenTutar) {
@@ -1626,10 +1752,19 @@ async function sakinBorcDus(sakinIdentifier, odenenTutar) {
     // Math.max kaldırıldı: Borç eksiye düşebilir (Alacaklı / Fazla ödeme)
     const guncelBorc = Number(sakin.borc || 0) - Number(odenenTutar);
 
-    await supabaseClient
+    const { error: borcGuncellemeHatasi } = await supabaseClient
         .from('sakinler')
         .update({ borc: guncelBorc })
         .eq('id', sakin.id);
+
+    if (borcGuncellemeHatasi) {
+        console.error("Borç güncellenemedi:", borcGuncellemeHatasi.message);
+        return null;
+    }
+
+    // Ödeme tablosu yenileme beklemeden yeni borç değerini de ekranda göster.
+    const localSakin = sakinlerData.find(s => s.id === sakin.id);
+    if (localSakin) localSakin.borc = guncelBorc;
 
     return { ...sakin, guncelBorc };
 }

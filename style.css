@@ -38,6 +38,71 @@ body {
     vertical-align: middle;}
 .excel-table th { background: #f8fafc; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
 
+.excel-table .debt-header {
+    background: #f8fafc;
+    color: #64748b;
+    min-width: 120px;
+}
+
+.excel-table .debt-cell {
+    min-width: 120px;
+    padding: 8px 6px;
+    font-weight: 800;
+    color: #475569;
+    background: transparent !important;
+}
+
+.excel-table .debt-cell-content {
+    position: relative;
+    min-height: 58px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.excel-table .debt-cell strong {
+    display: block;
+    font-size: 12px;
+    line-height: 1.2;
+    color: #475569;
+    background: transparent;
+}
+
+/* Public görünümde buton olmadığı için bakiye hücrenin dikeyinde ortalanır. */
+.excel-table .debt-cell-content-public {
+    justify-content: center;
+}
+
+.excel-table .debt-notify-btn {
+    position: absolute;
+    bottom: 0;
+    padding: 4px 12px;
+    border: 0;
+    border-radius: 6px;
+    background: #22c55e;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.excel-table .debt-notify-btn:hover {
+    background: #16a34a;
+    transform: translateY(-1px);
+}
+
+.excel-table .debt-cell-unpaid,
+.excel-table .debt-cell-credit,
+.excel-table .debt-cell-paid {
+    background: transparent !important;
+    color: #475569;
+}
+
 .excel-table th:first-child,
 .excel-table td:first-child {position: sticky;left: 0; background: #f8fafc; z-index: 30; border-right: 2px solid #3b82f6;}
 
